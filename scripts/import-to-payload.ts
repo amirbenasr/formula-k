@@ -15,10 +15,9 @@
 // Load environment variables FIRST
 import 'dotenv/config'
 
+import * as fs from 'fs'
 import { getPayload } from 'payload'
 import config from '../src/payload.config'
-import * as fs from 'fs'
-import * as path from 'path'
 
 const INPUT_FILE = './scripts/output/anua-products.json'
 
@@ -51,7 +50,7 @@ interface ScrapedData {
 async function uploadImageFromUrl(
   payload: Awaited<ReturnType<typeof getPayload>>,
   imageUrl: string,
-  altText: string
+  altText: string,
 ): Promise<string | null> {
   try {
     console.log(`   📷 Downloading: ${imageUrl.substring(0, 60)}...`)
@@ -82,7 +81,7 @@ async function uploadImageFromUrl(
     })
 
     console.log(`   ✓ Uploaded: ${media.id}`)
-    return media.id as string
+    return media.id as any
   } catch (error) {
     console.error(`   ❌ Error uploading image:`, error)
     return null
@@ -128,7 +127,7 @@ async function main() {
     })
 
     if (existingBrand.docs.length > 0) {
-      brandId = existingBrand.docs[0].id as string
+      brandId = existingBrand.docs[0].id as any
       console.log(`   ✓ Brand already exists: ${brandId}`)
     } else {
       const brand = await payload.create({
@@ -139,7 +138,7 @@ async function main() {
           description: data.brand.description,
         },
       })
-      brandId = brand.id as string
+      brandId = brand.id as any
       console.log(`   ✓ Created brand: ${brandId}`)
     }
   } catch (error) {
@@ -159,7 +158,7 @@ async function main() {
       })
 
       if (existing.docs.length > 0) {
-        categoryIdMap[category.slug] = existing.docs[0].id as string
+        categoryIdMap[category.slug] = existing.docs[0].id as any
         console.log(`   ✓ Category exists: ${category.title} (${categoryIdMap[category.slug]})`)
       } else {
         const created = await payload.create({
@@ -169,7 +168,7 @@ async function main() {
             slug: category.slug,
           },
         })
-        categoryIdMap[category.slug] = created.id as string
+        categoryIdMap[category.slug] = created.id as any
         console.log(`   ✓ Created: ${category.title} (${categoryIdMap[category.slug]})`)
       }
     } catch (error) {
@@ -205,7 +204,11 @@ async function main() {
       const galleryImages: Array<{ image: string }> = []
       for (let j = 0; j < Math.min(product.images.length, 5); j++) {
         // Max 5 images
-        const mediaId = await uploadImageFromUrl(payload, product.images[j], `${product.title} ${j + 1}`)
+        const mediaId = await uploadImageFromUrl(
+          payload,
+          product.images[j],
+          `${product.title} ${j + 1}`,
+        )
         if (mediaId) {
           galleryImages.push({ image: mediaId })
         }
@@ -229,9 +232,9 @@ async function main() {
           title: product.title,
           slug: product.slug,
           priceInUSD: product.priceInUSD,
-          gallery: galleryImages,
-          categories: categoryIds,
-          brand: brandId,
+          gallery: galleryImages as any,
+          categories: categoryIds as any,
+          brand: brandId as any,
           _status: 'draft',
           // Note: description would need to be converted to Lexical format
           // For now, we'll skip it or you can add it manually
