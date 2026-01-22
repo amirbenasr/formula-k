@@ -1,11 +1,11 @@
 import { Grid } from '@/components/Grid'
-import { ProductGridItem } from '@/components/ProductGridItem'
 import { Media } from '@/components/Media'
-import configPromise from '@payload-config'
-import { getPayload } from 'payload'
-import { notFound } from 'next/navigation'
-import type { Metadata } from 'next'
+import { ProductGridItem } from '@/components/ProductGridItem'
 import type { Media as MediaType } from '@/payload-types'
+import configPromise from '@payload-config'
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { getPayload } from 'payload'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -54,10 +54,7 @@ export default async function BrandPage({ params }: Props) {
   const { docs: products } = await payload.find({
     collection: 'products',
     where: {
-      and: [
-        { _status: { equals: 'published' } },
-        { brand: { equals: brand.id } },
-      ],
+      and: [{ _status: { equals: 'published' } }, { brand: { equals: brand.id } }],
     },
     select: {
       title: true,
@@ -66,6 +63,7 @@ export default async function BrandPage({ params }: Props) {
       priceInUSD: true,
     },
     sort: 'title',
+    limit: 100,
   })
 
   return (
@@ -76,20 +74,14 @@ export default async function BrandPage({ params }: Props) {
           <div className="flex flex-col items-center text-center max-w-2xl mx-auto">
             {logo?.url && (
               <div className="relative w-24 h-24 lg:w-32 lg:h-32 mb-6">
-                <Media
-                  resource={logo}
-                  className="object-contain"
-                  imgClassName="object-contain"
-                />
+                <Media resource={logo} className="object-contain" imgClassName="object-contain" />
               </div>
             )}
             <h1 className="text-3xl lg:text-5xl font-serif font-bold text-foreground mb-4">
               {brand.title}
             </h1>
             {brand.description && (
-              <p className="text-muted text-lg leading-relaxed">
-                {brand.description}
-              </p>
+              <p className="text-muted text-lg leading-relaxed">{brand.description}</p>
             )}
           </div>
         </div>
@@ -98,9 +90,7 @@ export default async function BrandPage({ params }: Props) {
       {/* Products Section */}
       <section className="container py-12">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl lg:text-2xl font-serif font-semibold">
-            Tous les Produits
-          </h2>
+          <h2 className="text-xl lg:text-2xl font-serif font-semibold">Tous les Produits</h2>
           <span className="text-sm text-muted">
             {products.length} {products.length === 1 ? 'produit' : 'produits'}
           </span>
@@ -114,9 +104,7 @@ export default async function BrandPage({ params }: Props) {
           </Grid>
         ) : (
           <div className="text-center py-16 bg-secondary/20 rounded-soft">
-            <p className="text-muted">
-              Aucun produit disponible pour cette marque.
-            </p>
+            <p className="text-muted">Aucun produit disponible pour cette marque.</p>
           </div>
         )}
       </section>
