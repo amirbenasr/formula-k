@@ -1,0 +1,23 @@
+/* Nav link hover effects */
+.navLink {
+  position: relative;
+  overflow: hidden;
+  border-radius: unset;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  &:hover::after,
+  &.active::after {
+    transform: translateX(0);
+  }
+}

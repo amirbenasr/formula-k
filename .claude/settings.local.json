@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(npm run generate:types:*)",
+      "Bash(npx payload generate:types)",
+      "Bash(npx tsc:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

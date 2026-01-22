@@ -1,0 +1,317 @@
+@import 'tailwindcss';
+
+@plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is([data-theme='dark'] *));
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
+/* Custom theme configuration for Tailwind v4 - Souglowy inspired */
+@theme {
+  /* Fonts */
+  --font-sans: var(--font-inter), 'Inter', sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --font-serif: var(--font-cormorant), 'Cormorant Garamond', 'Playfair Display', serif;
+
+  /* Colors - Souglowy palette */
+  --color-primary-50: #FDF8F8;
+  --color-primary-100: #FAF0F1;
+  --color-primary-200: #F5E0E2;
+  --color-primary-300: #EFD0D3;
+  --color-primary-400: #ECC2C5;
+  --color-primary-500: #E8B4B8;
+  --color-primary-600: #DD8B91;
+  --color-primary-700: #D2636B;
+  --color-primary-800: #B83D47;
+  --color-primary-900: #8A2E35;
+
+  --color-secondary-50: #FFFFFF;
+  --color-secondary-100: #FFF5EE;
+  --color-secondary-200: #FFE6D5;
+  --color-secondary-300: #FFD7BC;
+  --color-secondary-400: #FFC8A3;
+  --color-secondary-500: #FFB98A;
+
+  --color-accent-50: #F5F9F0;
+  --color-accent-100: #EBF3E1;
+  --color-accent-200: #D7E8C4;
+  --color-accent-300: #C3DCA6;
+  --color-accent-400: #B5D296;
+  --color-accent-500: #A8C686;
+  --color-accent-600: #8DB663;
+  --color-accent-700: #729A47;
+  --color-accent-800: #577536;
+  --color-accent-900: #3C5025;
+
+  /* Border radius */
+  --radius-pill: 9999px;
+  --radius-soft: 0.75rem;
+
+  /* Box shadows */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    0% { transform: translateY(10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slideInRight {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(0); }
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  max-width: 80rem;
+
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility container-custom {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  max-width: 80rem;
+
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding-inline: 2rem;
+  }
+}
+
+:root {
+  --background: #FAFAFA;
+  --foreground: #4A4A4A;
+
+  --card: #FFFFFF;
+  --card-foreground: #4A4A4A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #4A4A4A;
+
+  --primary: #E8B4B8;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #FFF5EE;
+  --secondary-foreground: #4A4A4A;
+
+  --muted: #67595E;
+  --muted-foreground: #67595E;
+
+  --accent: #A8C686;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --border: hsl(240 6% 90%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: #E8B4B8;
+
+  --radius: 0.75rem;
+
+  --success: hsl(196 52% 74%);
+  --warning: hsl(34 89% 85%);
+  --error: hsl(10, 93%, 70%);
+}
+
+[data-theme='dark'] {
+  --background: #1a1a1a;
+  --foreground: #F5F5F5;
+
+  --card: #262626;
+  --card-foreground: #F5F5F5;
+
+  --popover: #262626;
+  --popover-foreground: #F5F5F5;
+
+  --primary: #E8B4B8;
+  --primary-foreground: #1a1a1a;
+
+  --secondary: #3d3d3d;
+  --secondary-foreground: #F5F5F5;
+
+  --muted: #525252;
+  --muted-foreground: #a3a3a3;
+
+  --accent: #A8C686;
+  --accent-foreground: #1a1a1a;
+
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --border: hsla(0, 0%, 100%, 0.1);
+  --input: hsla(0, 0%, 100%, 0.1);
+  --ring: #E8B4B8;
+
+  --success: hsl(196 100% 14%);
+  --warning: hsl(34 51% 25%);
+  --error: hsl(10 39% 43%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-radius: var(--radius);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+}
+
+/* Base styles */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+html {
+  opacity: 0;
+}
+
+html[data-theme='dark'],
+html[data-theme='light'] {
+  opacity: initial;
+}
+
+a,
+input,
+button {
+  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* Component styles */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-accent text-white hover:bg-accent-600 focus:ring-accent shadow-soft hover:shadow-hover active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-primary text-white hover:bg-primary-600 focus:ring-primary shadow-soft hover:shadow-hover active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-muted hover:bg-primary/10 hover:text-primary;
+  }
+
+  .card {
+    @apply bg-card rounded-soft shadow-card overflow-hidden transition-all duration-300 hover:shadow-hover;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium;
+  }
+
+  .badge-new {
+    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-accent/20 text-accent-700;
+  }
+
+  .badge-bestseller {
+    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-primary/20 text-primary-700;
+  }
+
+  .badge-sale {
+    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-red-100 text-red-700;
+  }
+
+  .input-field {
+    @apply w-full rounded-soft border border-gray-200 px-4 py-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-muted mb-2;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
