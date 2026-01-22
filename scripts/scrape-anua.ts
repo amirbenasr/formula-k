@@ -296,7 +296,7 @@ async function main() {
     viewport: { width: 1920, height: 1080 },
   })
 
-  const page = await context.newPage({})
+  const page = await context.newPage()
 
   try {
     // Get all product URLs
