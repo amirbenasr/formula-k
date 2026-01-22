@@ -27,21 +27,32 @@ const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
+// Only enable S3/R2 storage if all required env vars are present
+const s3StoragePlugin: Plugin[] =
+  process.env.R2_BUCKET &&
+  process.env.R2_ENDPOINT &&
+  process.env.R2_ACCESS_KEY_ID &&
+  process.env.R2_SECRET_ACCESS_KEY
+    ? [
+        s3Storage({
+          collections: {
+            media: true,
+          },
+          bucket: process.env.R2_BUCKET,
+          config: {
+            endpoint: process.env.R2_ENDPOINT,
+            credentials: {
+              accessKeyId: process.env.R2_ACCESS_KEY_ID,
+              secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+            },
+            region: 'auto',
+          },
+        }),
+      ]
+    : []
+
 export const plugins: Plugin[] = [
-  s3Storage({
-    collections: {
-      media: true,
-    },
-    bucket: process.env.R2_BUCKET!,
-    config: {
-      endpoint: process.env.R2_ENDPOINT!,
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-      },
-      region: 'auto',
-    },
-  }),
+  ...s3StoragePlugin,
   seoPlugin({
     generateTitle,
     generateURL,
@@ -91,15 +102,20 @@ export const plugins: Plugin[] = [
     customers: {
       slug: 'users',
     },
-    payments: {
-      paymentMethods: [
-        stripeAdapter({
-          secretKey: process.env.STRIPE_SECRET_KEY!,
-          publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-          webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET!,
-        }),
-      ],
-    },
+    payments:
+      process.env.STRIPE_SECRET_KEY &&
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
+      process.env.STRIPE_WEBHOOKS_SIGNING_SECRET
+        ? {
+            paymentMethods: [
+              stripeAdapter({
+                secretKey: process.env.STRIPE_SECRET_KEY,
+                publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+                webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET,
+              }),
+            ],
+          }
+        : undefined,
     products: {
       productsCollectionOverride: ProductsCollection,
     },
