@@ -9,7 +9,13 @@
       "Bash(curl:*)",
       "Bash(find:*)",
       "Bash(npx create-next-app:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(xargs basename:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npm search:*)",
+      "Bash(pnpm search:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm payload migrate:create:*)"
     ]
   }
 }
