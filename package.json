@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" payload migrate && next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "scrape:anua": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/scrape-anua.ts",
     "import:products": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/import-to-payload.ts",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@payloadcms/admin-bar": "3.72.0",
+    "@payloadcms/db-postgres": "3.72.0",
     "@payloadcms/email-nodemailer": "3.72.0",
     "@payloadcms/live-preview-react": "3.72.0",
     "@payloadcms/next": "3.72.0",
@@ -32,6 +33,7 @@
     "@payloadcms/plugin-form-builder": "3.72.0",
     "@payloadcms/plugin-seo": "3.72.0",
     "@payloadcms/richtext-lexical": "3.72.0",
+    "@payloadcms/storage-r2": "^3.72.0",
     "@payloadcms/translations": "3.72.0",
     "@payloadcms/ui": "3.72.0",
     "@radix-ui/react-accordion": "1.2.11",
@@ -65,12 +67,10 @@
     "sonner": "^1.7.2",
     "stripe": "18.5.0",
     "tailwind-merge": "^2.3.0",
-    "tailwindcss-animate": "^1.0.7",
-    "@payloadcms/db-postgres": "3.72.0"
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "tsx": "^4.7.0",
     "@next/eslint-plugin-next": "^15.5.4",
     "@playwright/test": "1.56.1",
     "@tailwindcss/container-queries": "^0.1.1",
@@ -96,6 +96,7 @@
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.12",
+    "tsx": "^4.7.0",
     "typescript": "5.7.2",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.3"
