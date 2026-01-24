@@ -4,6 +4,7 @@ import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { GridTileImage } from '@/components/Grid/tile'
 import { Gallery } from '@/components/product/Gallery'
 import { ProductDescription } from '@/components/product/ProductDescription'
+import { ProductVideos } from '@/components/product/ProductVideos'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
@@ -140,6 +141,13 @@ export default async function ProductPage({ params }: Args) {
           </div>
         </div>
       </div>
+
+      {/* Product Videos Section */}
+      {product.videos && product.videos.length > 0 && (
+        <div className="container">
+          <ProductVideos videos={product.videos} productTitle={product.title} />
+        </div>
+      )}
 
       {product.layout?.length ? <RenderBlocks blocks={product.layout} /> : <></>}
 

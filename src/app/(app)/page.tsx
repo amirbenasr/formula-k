@@ -1,12 +1,14 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { ArrowRight, Sparkles, Droplets, Sun, Heart } from 'lucide-react'
-import { getPayload } from 'payload'
+import { VideoShowcase } from '@/components/VideoShowcase'
 import config from '@payload-config'
+import { ArrowRight, Droplets, Heart, Sparkles, Sun } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { getPayload } from 'payload'
 
 export const metadata = {
   title: 'SouGlowy | K-Beauty Tunisia',
-  description: 'Discover the secret to Glass Skin. The best K-Beauty products selected to reveal your natural glow.',
+  description:
+    'Discover the secret to Glass Skin. The best K-Beauty products selected to reveal your natural glow.',
 }
 
 export default async function HomePage() {
@@ -16,6 +18,24 @@ export default async function HomePage() {
     collection: 'brands',
     limit: 10,
   })
+
+  // Fetch products featured in video showcase
+  const { docs: allVideoShowcaseProducts } = await payload.find({
+    collection: 'products',
+    where: {
+      featuredInVideoShowcase: {
+        equals: true,
+      },
+    },
+    limit: 20,
+    depth: 2,
+  })
+
+  // Filter to only include products that have videos
+  const videoShowcaseProducts = allVideoShowcaseProducts.filter(
+    (product) => product.videos && product.videos.length > 0,
+  )
+
   return (
     <div>
       {/* Hero Section */}
@@ -23,9 +43,7 @@ export default async function HomePage() {
         <div className="container py-16 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
-              <span className="badge-new mb-4">
-                K-Beauty Tunisia
-              </span>
+              <span className="badge-new mb-4">K-Beauty Tunisia</span>
               <h1 className="text-4xl lg:text-6xl font-serif font-bold text-foreground mb-6 leading-tight">
                 Découvrez le Secret de la Glass Skin
               </h1>
@@ -84,13 +102,14 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Video Showcase Section */}
+      {videoShowcaseProducts.length > 0 && <VideoShowcase products={videoShowcaseProducts} />}
+
       {/* Featured Products Placeholder */}
       <section className="py-16">
         <div className="container">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl lg:text-3xl font-serif font-bold">
-              Produits Vedettes
-            </h2>
+            <h2 className="text-2xl lg:text-3xl font-serif font-bold">Produits Vedettes</h2>
             <Link
               href="/products"
               className="text-sm text-primary hover:underline flex items-center gap-1"
@@ -101,7 +120,9 @@ export default async function HomePage() {
           </div>
 
           <div className="text-center py-12 bg-secondary/20 rounded-soft">
-            <p className="text-muted mb-4">Pas encore de produits. Ajoutez des produits dans le panneau admin.</p>
+            <p className="text-muted mb-4">
+              Pas encore de produits. Ajoutez des produits dans le panneau admin.
+            </p>
             <Link href="/admin" className="btn-primary">
               Aller à l&apos;Admin
             </Link>
@@ -118,12 +139,36 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { name: 'Nettoyants', image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop' },
-              { name: 'Toniques', image: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=200&h=200&fit=crop' },
-              { name: 'Sérums', image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=200&h=200&fit=crop' },
-              { name: 'Crèmes', image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=200&h=200&fit=crop' },
-              { name: 'Masques', image: 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=200&h=200&fit=crop' },
-              { name: 'Solaires', image: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=200&h=200&fit=crop' },
+              {
+                name: 'Nettoyants',
+                image:
+                  'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop',
+              },
+              {
+                name: 'Toniques',
+                image:
+                  'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=200&h=200&fit=crop',
+              },
+              {
+                name: 'Sérums',
+                image:
+                  'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=200&h=200&fit=crop',
+              },
+              {
+                name: 'Crèmes',
+                image:
+                  'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=200&h=200&fit=crop',
+              },
+              {
+                name: 'Masques',
+                image:
+                  'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=200&h=200&fit=crop',
+              },
+              {
+                name: 'Solaires',
+                image:
+                  'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=200&h=200&fit=crop',
+              },
             ].map((category) => (
               <Link
                 key={category.name}
@@ -160,12 +205,11 @@ export default async function HomePage() {
               />
             </div>
             <div>
-              <h2 className="text-2xl lg:text-3xl font-serif font-bold mb-6">
-                Pourquoi K-Beauty?
-              </h2>
+              <h2 className="text-2xl lg:text-3xl font-serif font-bold mb-6">Pourquoi K-Beauty?</h2>
               <p className="text-muted mb-6 leading-relaxed">
-                La K-Beauty est reconnue mondialement pour ses formules innovantes et ses ingrédients de haute qualité.
-                Découvrez une approche holistique des soins de la peau qui met l&apos;accent sur la prévention et l&apos;hydratation.
+                La K-Beauty est reconnue mondialement pour ses formules innovantes et ses
+                ingrédients de haute qualité. Découvrez une approche holistique des soins de la peau
+                qui met l&apos;accent sur la prévention et l&apos;hydratation.
               </p>
               <ul className="space-y-4">
                 {[

@@ -1,6 +1,7 @@
 import type { Footer } from '@/payload-types'
 
 import { FooterMenu } from '@/components/Footer/menu'
+import { PaletteSelector } from '@/providers/Palette/PaletteSelector'
 import { ThemeSelector } from '@/providers/Theme/ThemeSelector'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import Link from 'next/link'
@@ -190,6 +191,11 @@ export async function Footer() {
               {/* Theme Selector */}
               <div className="ml-2 border-l border-primary/20 pl-4">
                 <ThemeSelector />
+              </div>
+
+              {/* Palette Selector (for preview) */}
+              <div className="ml-2 border-l border-primary/20 pl-4">
+                <PaletteSelector />
               </div>
             </div>
 

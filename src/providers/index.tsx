@@ -4,18 +4,22 @@ import { stripeAdapterClient } from '@payloadcms/plugin-ecommerce/payments/strip
 import React from 'react'
 
 import { HeaderThemeProvider } from './HeaderTheme'
+import { PaletteProvider } from './Palette'
+import type { Palette } from './Palette/types'
 import { ThemeProvider } from './Theme'
 import { SonnerProvider } from '@/providers/Sonner'
 
 export const Providers: React.FC<{
   children: React.ReactNode
-}> = ({ children }) => {
+  palette?: Palette
+}> = ({ children, palette = 'warm' }) => {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <HeaderThemeProvider>
-          <SonnerProvider />
-          <EcommerceProvider
+      <PaletteProvider initialPalette={palette}>
+        <AuthProvider>
+          <HeaderThemeProvider>
+            <SonnerProvider />
+            <EcommerceProvider
             enableVariants={true}
             api={{
               cartsFetchQuery: {
@@ -44,6 +48,7 @@ export const Providers: React.FC<{
           </EcommerceProvider>
         </HeaderThemeProvider>
       </AuthProvider>
+    </PaletteProvider>
     </ThemeProvider>
   )
 }

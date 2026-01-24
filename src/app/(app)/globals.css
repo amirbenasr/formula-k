@@ -27,7 +27,7 @@
   --font-mono: var(--font-geist-mono), monospace;
   --font-serif: var(--font-cormorant), 'Cormorant Garamond', 'Playfair Display', serif;
 
-  /* Colors - Souglowy palette */
+  /* Colors - Warm palette (Rose/Peach) - Default */
   --color-primary-50: #FDF8F8;
   --color-primary-100: #FAF0F1;
   --color-primary-200: #F5E0E2;
@@ -56,6 +56,36 @@
   --color-accent-700: #729A47;
   --color-accent-800: #577536;
   --color-accent-900: #3C5025;
+
+  /* Colors - Cool palette shades (Blue/Lavender) */
+  --color-cool-primary-50: #F5F8FC;
+  --color-cool-primary-100: #E8F0F8;
+  --color-cool-primary-200: #D4E4F4;
+  --color-cool-primary-300: #C0D8F0;
+  --color-cool-primary-400: #ACCCE8;
+  --color-cool-primary-500: #B8D4E8;
+  --color-cool-primary-600: #8BB8D8;
+  --color-cool-primary-700: #5E9CC8;
+  --color-cool-primary-800: #3680B8;
+  --color-cool-primary-900: #1E5A8A;
+
+  --color-cool-secondary-50: #FAFAFF;
+  --color-cool-secondary-100: #F0F4FF;
+  --color-cool-secondary-200: #E4EAFC;
+  --color-cool-secondary-300: #D8E0F8;
+  --color-cool-secondary-400: #CCD6F4;
+  --color-cool-secondary-500: #C8D4F0;
+
+  --color-cool-accent-50: #F5F7FC;
+  --color-cool-accent-100: #EAEFF8;
+  --color-cool-accent-200: #D8E0F4;
+  --color-cool-accent-300: #C4D0F0;
+  --color-cool-accent-400: #B8C8EC;
+  --color-cool-accent-500: #A8B8E8;
+  --color-cool-accent-600: #8A9CD8;
+  --color-cool-accent-700: #6C80C8;
+  --color-cool-accent-800: #4E64B8;
+  --color-cool-accent-900: #36488A;
 
   /* Border radius */
   --radius-pill: 9999px;
@@ -179,6 +209,74 @@
   --border: hsla(0, 0%, 100%, 0.1);
   --input: hsla(0, 0%, 100%, 0.1);
   --ring: #E8B4B8;
+
+  --success: hsl(196 100% 14%);
+  --warning: hsl(34 51% 25%);
+  --error: hsl(10 39% 43%);
+}
+
+/* Cool Palette (Blue/Lavender) - Light Mode */
+[data-palette='cool'] {
+  --background: #F5F8FC;
+  --foreground: #3A4A5A;
+
+  --card: #FFFFFF;
+  --card-foreground: #3A4A5A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #3A4A5A;
+
+  --primary: #B8D4E8;
+  --primary-foreground: #1E3A5A;
+
+  --secondary: #E8F0F8;
+  --secondary-foreground: #3A4A5A;
+
+  --muted: #5A6A7A;
+  --muted-foreground: #5A6A7A;
+
+  --accent: #A8B8E8;
+  --accent-foreground: #1E2A5A;
+
+  --border: hsl(210 20% 90%);
+  --input: hsl(210 20% 91%);
+  --ring: #B8D4E8;
+
+  --success: hsl(196 52% 74%);
+  --warning: hsl(34 89% 85%);
+  --error: hsl(10, 93%, 70%);
+}
+
+/* Cool Palette (Blue/Lavender) - Dark Mode */
+[data-palette='cool'][data-theme='dark'],
+[data-theme='dark'][data-palette='cool'] {
+  --background: #0F1A2A;
+  --foreground: #E8F0F8;
+
+  --card: #1A2A3A;
+  --card-foreground: #E8F0F8;
+
+  --popover: #1A2A3A;
+  --popover-foreground: #E8F0F8;
+
+  --primary: #B8D4E8;
+  --primary-foreground: #0F1A2A;
+
+  --secondary: #2A3A4A;
+  --secondary-foreground: #E8F0F8;
+
+  --muted: #4A5A6A;
+  --muted-foreground: #9AAABA;
+
+  --accent: #A8B8E8;
+  --accent-foreground: #0F1A2A;
+
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --border: hsla(210, 50%, 50%, 0.15);
+  --input: hsla(210, 50%, 50%, 0.15);
+  --ring: #B8D4E8;
 
   --success: hsl(196 100% 14%);
   --warning: hsl(34 51% 25%);

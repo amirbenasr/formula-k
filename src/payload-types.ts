@@ -133,10 +133,12 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
+    'site-settings': SiteSetting;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
   };
   locale: null;
   user: User & {
@@ -299,6 +301,39 @@ export interface Product {
   priceInUSDEnabled?: boolean | null;
   priceInUSD?: number | null;
   relatedProducts?: (number | Product)[] | null;
+  /**
+   * Display this product in the homepage video showcase section
+   */
+  featuredInVideoShowcase?: boolean | null;
+  /**
+   * Add demo videos, tutorials, or UGC content for this product
+   */
+  videos?:
+    | {
+        /**
+         * Short title for the video (e.g., "How to apply", "Before & After")
+         */
+        title?: string | null;
+        videoType?: ('upload' | 'external') | null;
+        /**
+         * Upload MP4, WebM, or MOV file
+         */
+        videoFile?: (number | null) | Media;
+        /**
+         * Paste YouTube, TikTok, or Instagram video URL
+         */
+        externalUrl?: string | null;
+        /**
+         * Custom thumbnail image for the video (recommended: 9:16 ratio for vertical videos)
+         */
+        thumbnail?: (number | null) | Media;
+        /**
+         * Check if this is a vertical/portrait video (TikTok, Reels style)
+         */
+        isVertical?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
   meta?: {
     title?: string | null;
     /**
@@ -1660,6 +1695,18 @@ export interface ProductsSelect<T extends boolean = true> {
   priceInUSDEnabled?: T;
   priceInUSD?: T;
   relatedProducts?: T;
+  featuredInVideoShowcase?: T;
+  videos?:
+    | T
+    | {
+        title?: T;
+        videoType?: T;
+        videoFile?: T;
+        externalUrl?: T;
+        thumbnail?: T;
+        isVertical?: T;
+        id?: T;
+      };
   meta?:
     | T
     | {
@@ -1870,6 +1917,24 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  /**
+   * Choose the color theme for the storefront. Warm uses rose/peach tones, Cool uses blue/lavender tones.
+   */
+  colorPalette?: ('warm' | 'cool') | null;
+  siteName?: string | null;
+  /**
+   * Used for SEO meta description
+   */
+  siteDescription?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -1910,6 +1975,18 @@ export interface FooterSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  colorPalette?: T;
+  siteName?: T;
+  siteDescription?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

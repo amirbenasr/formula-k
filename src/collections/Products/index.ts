@@ -51,6 +51,8 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
     priceInUSD: true,
     inventory: true,
     meta: true,
+    videos: true,
+    featuredInVideoShowcase: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -166,6 +168,86 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
             },
           ],
           label: 'Product Details',
+        },
+        {
+          label: 'Videos',
+          description: 'Add product demo videos and manage video showcase settings',
+          fields: [
+            {
+              name: 'featuredInVideoShowcase',
+              type: 'checkbox',
+              label: 'Feature in Video Showcase',
+              defaultValue: false,
+              admin: {
+                description: 'Display this product in the homepage video showcase section',
+              },
+            },
+            {
+              name: 'videos',
+              type: 'array',
+              label: 'Product Videos',
+              admin: {
+                description: 'Add demo videos, tutorials, or UGC content for this product',
+              },
+              fields: [
+                {
+                  name: 'title',
+                  type: 'text',
+                  label: 'Video Title',
+                  admin: {
+                    description: 'Short title for the video (e.g., "How to apply", "Before & After")',
+                  },
+                },
+                {
+                  name: 'videoType',
+                  type: 'select',
+                  label: 'Video Source',
+                  defaultValue: 'upload',
+                  options: [
+                    { label: 'Upload Video', value: 'upload' },
+                    { label: 'External URL (YouTube, TikTok, etc.)', value: 'external' },
+                  ],
+                },
+                {
+                  name: 'videoFile',
+                  type: 'upload',
+                  relationTo: 'media',
+                  label: 'Video File',
+                  admin: {
+                    condition: (data, siblingData) => siblingData?.videoType === 'upload',
+                    description: 'Upload MP4, WebM, or MOV file',
+                  },
+                },
+                {
+                  name: 'externalUrl',
+                  type: 'text',
+                  label: 'External Video URL',
+                  admin: {
+                    condition: (data, siblingData) => siblingData?.videoType === 'external',
+                    description: 'Paste YouTube, TikTok, or Instagram video URL',
+                  },
+                },
+                {
+                  name: 'thumbnail',
+                  type: 'upload',
+                  relationTo: 'media',
+                  label: 'Video Thumbnail',
+                  admin: {
+                    description: 'Custom thumbnail image for the video (recommended: 9:16 ratio for vertical videos)',
+                  },
+                },
+                {
+                  name: 'isVertical',
+                  type: 'checkbox',
+                  label: 'Vertical Video (9:16)',
+                  defaultValue: true,
+                  admin: {
+                    description: 'Check if this is a vertical/portrait video (TikTok, Reels style)',
+                  },
+                },
+              ],
+            },
+          ],
         },
         {
           name: 'meta',
