@@ -77,6 +77,9 @@ export interface Config {
     categories: Category;
     brands: Brand;
     media: Media;
+    'reward-tiers': RewardTier;
+    'reward-transactions': RewardTransaction;
+    'rewards-catalog': RewardsCatalog;
     forms: Form;
     'form-submissions': FormSubmission;
     addresses: Address;
@@ -111,6 +114,9 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     brands: BrandsSelect<false> | BrandsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'reward-tiers': RewardTiersSelect<false> | RewardTiersSelect<true>;
+    'reward-transactions': RewardTransactionsSelect<false> | RewardTransactionsSelect<true>;
+    'rewards-catalog': RewardsCatalogSelect<false> | RewardsCatalogSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     addresses: AddressesSelect<false> | AddressesSelect<true>;
@@ -206,6 +212,52 @@ export interface User {
     hasNextPage?: boolean;
     totalDocs?: number;
   };
+  /**
+   * Whether this user has joined the Glow Rewards program
+   */
+  rewardsEnabled?: boolean | null;
+  /**
+   * Current available points to spend
+   */
+  rewardPoints?: number | null;
+  /**
+   * Total points ever earned (used for tier calculation)
+   */
+  lifetimePoints?: number | null;
+  /**
+   * Current rewards tier based on lifetime points
+   */
+  rewardTier?: (number | null) | RewardTier;
+  /**
+   * Unique code for referring friends
+   */
+  referralCode?: string | null;
+  /**
+   * User who referred this customer
+   */
+  referredBy?: (number | null) | User;
+  referralCount?: number | null;
+  /**
+   * Last time user checked in for daily points
+   */
+  lastCheckIn?: string | null;
+  /**
+   * Consecutive days of check-ins
+   */
+  checkInStreak?: number | null;
+  /**
+   * For birthday bonus points
+   */
+  birthday?: string | null;
+  rewardsJoinedAt?: string | null;
+  /**
+   * Whether user has completed their profile for bonus points
+   */
+  profileComplete?: boolean | null;
+  /**
+   * Whether user has followed on social media for bonus points
+   */
+  socialFollowed?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -962,11 +1014,6 @@ export interface Transaction {
         id?: string | null;
       }[]
     | null;
-  paymentMethod?: 'stripe' | null;
-  stripe?: {
-    customerID?: string | null;
-    paymentIntentID?: string | null;
-  };
   billingAddress?: {
     title?: string | null;
     firstName?: string | null;
@@ -1076,6 +1123,142 @@ export interface Address {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-tiers".
+ */
+export interface RewardTier {
+  id: number;
+  name: string;
+  /**
+   * URL-friendly identifier (e.g., starter, glowing, radiant, glass-skin)
+   */
+  slug: string;
+  /**
+   * Points needed to reach this tier
+   */
+  minPoints: number;
+  /**
+   * Multiplier for earning points (e.g., 1.5 = 50% bonus)
+   */
+  pointsMultiplier: number;
+  /**
+   * Emoji or icon identifier for this tier
+   */
+  icon?: string | null;
+  /**
+   * Hex color for the tier badge
+   */
+  color?: string | null;
+  benefits?:
+    | {
+        benefit: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Order in which tiers are displayed (lowest first)
+   */
+  order: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-transactions".
+ */
+export interface RewardTransaction {
+  id: number;
+  user: number | User;
+  type: 'earned' | 'redeemed' | 'expired' | 'adjusted';
+  /**
+   * Positive for earned, negative for redeemed/expired
+   */
+  points: number;
+  action:
+    | 'welcome'
+    | 'profile_complete'
+    | 'purchase'
+    | 'review'
+    | 'review_photo'
+    | 'referral'
+    | 'birthday'
+    | 'social_follow'
+    | 'checkin'
+    | 'challenge'
+    | 'redemption'
+    | 'expiry'
+    | 'admin_adjustment';
+  /**
+   * Human-readable description of the transaction
+   */
+  description?: string | null;
+  /**
+   * Related order if this is a purchase transaction
+   */
+  relatedOrder?: (number | null) | Order;
+  /**
+   * Related reward if this is a redemption
+   */
+  relatedReward?: (number | null) | RewardsCatalog;
+  /**
+   * Additional data (order ID, referral code, etc.)
+   */
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rewards-catalog".
+ */
+export interface RewardsCatalog {
+  id: number;
+  name: string;
+  description?: string | null;
+  pointsCost: number;
+  type: 'discount_amount' | 'discount_percent' | 'free_product' | 'free_shipping' | 'free_sample';
+  /**
+   * Amount in TND for discount_amount, percentage for discount_percent
+   */
+  discountValue?: number | null;
+  /**
+   * Product to give for free
+   */
+  freeProduct?: (number | null) | Product;
+  image?: (number | null) | Media;
+  /**
+   * Leave empty if available to all tiers
+   */
+  minimumTier?: (number | null) | RewardTier;
+  /**
+   * Maximum times a user can redeem this reward (0 = unlimited)
+   */
+  limitPerUser?: number | null;
+  /**
+   * Total inventory of this reward (0 = unlimited)
+   */
+  totalAvailable?: number | null;
+  totalRedeemed?: number | null;
+  isActive?: boolean | null;
+  /**
+   * Show prominently on the rewards page
+   */
+  isFeatured?: boolean | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
 export interface FormSubmission {
@@ -1134,6 +1317,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'reward-tiers';
+        value: number | RewardTier;
+      } | null)
+    | ({
+        relationTo: 'reward-transactions';
+        value: number | RewardTransaction;
+      } | null)
+    | ({
+        relationTo: 'rewards-catalog';
+        value: number | RewardsCatalog;
       } | null)
     | ({
         relationTo: 'forms';
@@ -1227,6 +1422,19 @@ export interface UsersSelect<T extends boolean = true> {
   orders?: T;
   cart?: T;
   addresses?: T;
+  rewardsEnabled?: T;
+  rewardPoints?: T;
+  lifetimePoints?: T;
+  rewardTier?: T;
+  referralCode?: T;
+  referredBy?: T;
+  referralCount?: T;
+  lastCheckIn?: T;
+  checkInStreak?: T;
+  birthday?: T;
+  rewardsJoinedAt?: T;
+  profileComplete?: T;
+  socialFollowed?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1460,6 +1668,67 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-tiers_select".
+ */
+export interface RewardTiersSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  minPoints?: T;
+  pointsMultiplier?: T;
+  icon?: T;
+  color?: T;
+  benefits?:
+    | T
+    | {
+        benefit?: T;
+        id?: T;
+      };
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reward-transactions_select".
+ */
+export interface RewardTransactionsSelect<T extends boolean = true> {
+  user?: T;
+  type?: T;
+  points?: T;
+  action?: T;
+  description?: T;
+  relatedOrder?: T;
+  relatedReward?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rewards-catalog_select".
+ */
+export interface RewardsCatalogSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  pointsCost?: T;
+  type?: T;
+  discountValue?: T;
+  freeProduct?: T;
+  image?: T;
+  minimumTier?: T;
+  limitPerUser?: T;
+  totalAvailable?: T;
+  totalRedeemed?: T;
+  isActive?: T;
+  isFeatured?: T;
+  validFrom?: T;
+  validUntil?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1798,13 +2067,6 @@ export interface TransactionsSelect<T extends boolean = true> {
         variant?: T;
         quantity?: T;
         id?: T;
-      };
-  paymentMethod?: T;
-  stripe?:
-    | T
-    | {
-        customerID?: T;
-        paymentIntentID?: T;
       };
   billingAddress?:
     | T

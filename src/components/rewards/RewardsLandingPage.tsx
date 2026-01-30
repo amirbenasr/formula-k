@@ -95,7 +95,7 @@ export const RewardsLandingPage: React.FC = () => {
           toast.error(data.error || 'Failed to join rewards program')
         }
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('An error occurred. Please try again.')
     } finally {
       setIsJoining(false)
@@ -160,7 +160,7 @@ export const RewardsLandingPage: React.FC = () => {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {tiers.map((tier, index) => (
+            {tiers.map((tier) => (
               <div
                 key={tier.name}
                 className={`relative p-6 rounded-2xl border-2 ${tier.color} transition-transform hover:scale-105`}
@@ -194,7 +194,7 @@ export const RewardsLandingPage: React.FC = () => {
             Ways to Earn Points
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Points add up quickly! Here's how you can earn your way to amazing rewards.
+            Points add up quickly! Here&apos;s how you can earn your way to amazing rewards.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -255,7 +255,7 @@ export const RewardsLandingPage: React.FC = () => {
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
             Invite your friends to join Glow Rewards. When they make their first purchase,
-            you'll both earn <span className="font-bold text-primary">200 bonus points</span>!
+            you&apos;ll both earn <span className="font-bold text-primary">200 bonus points</span>!
           </p>
           <Button size="lg" onClick={handleJoin} className="rounded-full px-8">
             {user ? 'Get Your Referral Code' : 'Join & Start Referring'}

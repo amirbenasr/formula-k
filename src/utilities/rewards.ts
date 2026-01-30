@@ -62,10 +62,10 @@ export async function awardPoints(
     }
 
     // Calculate points
-    let basePoints = options.points ?? REWARD_POINTS[action]
+    const basePoints = options.points ?? REWARD_POINTS[action]
 
     // Apply multiplier for purchase actions
-    let pointsToAward = action === 'purchase' ? Math.floor(basePoints * multiplier) : basePoints
+    const pointsToAward = action === 'purchase' ? Math.floor(basePoints * multiplier) : basePoints
 
     // Update user points
     const newRewardPoints = (user.rewardPoints || 0) + pointsToAward

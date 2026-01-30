@@ -1,11 +1,10 @@
 'use client'
 
+import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/providers/Auth'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { LoadingSpinner } from '@/components/LoadingSpinner'
 
 interface Tier {
   name: string
@@ -70,7 +69,6 @@ const actionLabels: Record<string, string> = {
 }
 
 export const RewardsDashboard: React.FC = () => {
-  const { user } = useAuth()
   const [data, setData] = useState<RewardsData | null>(null)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,6 +92,7 @@ export const RewardsDashboard: React.FC = () => {
       setRewards(catalogData.rewards || [])
     } catch (error) {
       toast.error('Failed to load rewards data')
+      console.log(error)
     } finally {
       setLoading(false)
     }
@@ -121,6 +120,7 @@ export const RewardsDashboard: React.FC = () => {
       }
     } catch (error) {
       toast.error('An error occurred')
+      console.log(error)
     } finally {
       setCheckingIn(false)
     }
@@ -149,6 +149,7 @@ export const RewardsDashboard: React.FC = () => {
       }
     } catch (error) {
       toast.error('An error occurred')
+      console.log(error)
     } finally {
       setRedeeming(null)
     }
@@ -186,7 +187,7 @@ export const RewardsDashboard: React.FC = () => {
         <div className="text-6xl mb-4">✨</div>
         <h2 className="text-2xl font-bold mb-4">Join Glow Rewards</h2>
         <p className="text-muted-foreground mb-6">
-          You're not a rewards member yet. Join now and earn 100 welcome points!
+          You&apos;re not a rewards member yet. Join now and earn 100 welcome points!
         </p>
         <Button asChild className="rounded-full">
           <Link href="/rewards">Learn More & Join</Link>
@@ -197,7 +198,8 @@ export const RewardsDashboard: React.FC = () => {
 
   const progressToNextTier = data.nextTier
     ? ((data.lifetimePoints - (data.nextTier.minPoints - data.nextTier.pointsToReach)) /
-        data.nextTier.minPoints) * 100
+        data.nextTier.minPoints) *
+      100
     : 100
 
   return (
@@ -216,7 +218,9 @@ export const RewardsDashboard: React.FC = () => {
               <p className="text-2xl">
                 {data.tier?.icon} {data.tier?.name}
               </p>
-              <p className="text-sm text-primary font-medium">{data.tier?.pointsMultiplier}x points</p>
+              <p className="text-sm text-primary font-medium">
+                {data.tier?.pointsMultiplier}x points
+              </p>
             </div>
           </div>
 
@@ -242,9 +246,7 @@ export const RewardsDashboard: React.FC = () => {
           <div className="text-4xl mb-3">📅</div>
           <h3 className="font-semibold mb-2">Daily Check-in</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {data.checkInStreak > 0
-              ? `${data.checkInStreak} day streak! 🔥`
-              : 'Start your streak!'}
+            {data.checkInStreak > 0 ? `${data.checkInStreak} day streak! 🔥` : 'Start your streak!'}
           </p>
           <Button
             onClick={handleCheckIn}
@@ -252,11 +254,7 @@ export const RewardsDashboard: React.FC = () => {
             variant={canCheckIn() ? 'default' : 'outline'}
             className="w-full rounded-full"
           >
-            {checkingIn
-              ? 'Checking in...'
-              : canCheckIn()
-                ? '+5 Points'
-                : 'Come back tomorrow!'}
+            {checkingIn ? 'Checking in...' : canCheckIn() ? '+5 Points' : 'Come back tomorrow!'}
           </Button>
         </div>
       </div>
@@ -269,7 +267,7 @@ export const RewardsDashboard: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Invite friends and earn 200 points when they make their first purchase!
               <br />
-              You've referred <span className="font-bold">{data.referralCount}</span> friends.
+              You&apos;ve referred <span className="font-bold">{data.referralCount}</span> friends.
             </p>
           </div>
           <div className="flex items-center gap-2">

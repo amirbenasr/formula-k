@@ -196,6 +196,9 @@ devDependencies:
   eslint-plugin-react-hooks:
     specifier: ^5.2.0
     version: 5.2.0(eslint@9.39.2)
+  husky:
+    specifier: ^9.1.7
+    version: 9.1.7
   jsdom:
     specifier: 26.1.0
     version: 26.1.0
@@ -7269,6 +7272,12 @@ packages:
   /human-signals@5.0.0:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
+    dev: true
+
+  /husky@9.1.7:
+    resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
+    engines: {node: '>=18'}
+    hasBin: true
     dev: true
 
   /iconv-lite@0.6.3:
