@@ -7,7 +7,7 @@ export default function Loading() {
       {Array(12)
         .fill(0)
         .map((_, index) => {
-          return <div className="animate-pulse bg-neutral-100 dark:bg-neutral-900" key={index} />
+          return <div className="animate-pulse bg-secondary dark:bg-secondary" key={index} />
         })}
     </Grid>
   )

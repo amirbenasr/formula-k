@@ -2,8 +2,8 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnly } from '@/access/adminOnly'
 import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
-import { publicAccess } from '@/access/publicAccess'
 import { adminOrSelf } from '@/access/adminOrSelf'
+import { publicAccess } from '@/access/publicAccess'
 import { checkRole } from '@/access/utilities'
 
 import { ensureFirstUserIsAdmin } from './hooks/ensureFirstUserIsAdmin'
@@ -24,6 +24,27 @@ export const Users: CollectionConfig = {
   },
   auth: {
     tokenExpiration: 1209600,
+    verify: true,
+    forgotPassword: {
+      generateEmailHTML: ({ req, token, user }: any) => {
+        // Use the token provided to allow your user to reset their password
+        const resetPasswordURL = `https://localhost:3000/reset-password?token=${token}`
+
+        return `
+          <!doctype html>
+          <html>
+            <body>
+              <h1>Here is my custom email template!</h1>
+              <p>Hello, ${user.email}!</p>
+              <p>Click below to reset your password.</p>
+              <p>
+                <a href="${resetPasswordURL}">${resetPasswordURL}</a>
+              </p>
+            </body>
+          </html>
+        `
+      },
+    },
   },
   fields: [
     {

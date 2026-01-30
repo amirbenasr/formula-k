@@ -236,7 +236,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
                   >
                     {/* Video Container - Active video is taller */}
                     <div
-                      className={`relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 transition-all duration-300 cursor-pointer ${
+                      className={`relative rounded-xl overflow-hidden bg-secondary transition-all duration-300 cursor-pointer ${
                         isActive ? 'aspect-[9/17]' : 'aspect-[9/14]'
                       }`}
                       onClick={() => handleVideoClick(index, videoId)}
@@ -333,7 +333,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
                       {productImage && (
                         <Link
                           href={`/products/${item.product.slug}`}
-                          className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative"
+                          className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-secondary relative"
                         >
                           <Image
                             src={productImage}
@@ -371,8 +371,8 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
           </CarouselContent>
 
           {/* Navigation Arrows */}
-          <CarouselPrevious className="left-0 md:left-4 lg:left-12 xl:left-24 2xl:left-32 bg-white dark:bg-card shadow-lg border-0 hover:bg-primary hover:text-white" />
-          <CarouselNext className="right-0 md:right-4 lg:right-12 xl:right-24 2xl:right-32 bg-white dark:bg-card shadow-lg border-0 hover:bg-primary hover:text-white" />
+          <CarouselPrevious className="left-0 md:left-4 lg:left-12 xl:left-24 2xl:left-32 bg-card shadow-lg border-0 hover:bg-primary hover:text-primary-foreground" />
+          <CarouselNext className="right-0 md:right-4 lg:right-12 xl:right-24 2xl:right-32 bg-card shadow-lg border-0 hover:bg-primary hover:text-primary-foreground" />
         </Carousel>
       </div>
 
@@ -384,7 +384,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
               key={index}
               onClick={() => api?.scrollTo(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                currentIndex === index ? 'bg-primary w-6' : 'bg-gray-300 dark:bg-gray-600'
+                currentIndex === index ? 'bg-primary w-6' : 'bg-muted/50'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />

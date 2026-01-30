@@ -16,7 +16,7 @@ async function CategoryList() {
 
   return (
     <div>
-      <h3 className="text-xs mb-2 text-neutral-500 dark:text-neutral-400">Category</h3>
+      <h3 className="text-xs mb-2 text-muted">Category</h3>
 
       <ul>
         {categories.docs.map((category) => {
@@ -32,8 +32,8 @@ async function CategoryList() {
 }
 
 const skeleton = 'mb-3 h-4 w-5/6 animate-pulse rounded'
-const activeAndTitles = 'bg-neutral-800 dark:bg-neutral-300'
-const items = 'bg-neutral-400 dark:bg-neutral-700'
+const activeAndTitles = 'bg-foreground dark:bg-foreground'
+const items = 'bg-muted/50 dark:bg-muted'
 
 export function Categories() {
   return (

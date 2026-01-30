@@ -81,7 +81,7 @@ export default async function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-12 border-b border-gray-100 dark:border-border">
+      <section className="py-12 border-b border-border">
         <div className="container">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[
@@ -239,7 +239,7 @@ export default async function HomePage() {
 
       {/* Brands */}
       {brands.length > 0 && (
-        <section className="py-16 bg-white dark:bg-card border-t border-gray-100 dark:border-border">
+        <section className="py-16 bg-card border-t border-border">
           <div className="container">
             <h2 className="text-2xl lg:text-3xl font-serif font-bold text-center mb-10">
               Nos Marques

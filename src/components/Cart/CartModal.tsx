@@ -115,7 +115,7 @@ export function CartModal() {
                           className="z-30 flex flex-row space-x-4"
                           href={`/products/${(item.product as Product)?.slug}`}
                         >
-                          <div className="relative h-16 w-16 cursor-pointer overflow-hidden rounded-md border border-neutral-300 bg-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800">
+                          <div className="relative h-16 w-16 cursor-pointer overflow-hidden rounded-md border border-border bg-secondary dark:bg-secondary hover:bg-secondary/80">
                             {image?.url && (
                               <Image
                                 alt={image?.alt || product?.title || ''}
@@ -130,7 +130,7 @@ export function CartModal() {
                           <div className="flex flex-1 flex-col text-base">
                             <span className="leading-tight">{product?.title}</span>
                             {isVariant && variant ? (
-                              <p className="text-sm text-neutral-500 dark:text-neutral-400 capitalize">
+                              <p className="text-sm text-muted capitalize">
                                 {variant.options
                                   ?.map((option) => {
                                     if (typeof option === 'object') return option.label
@@ -163,13 +163,13 @@ export function CartModal() {
               </ul>
 
               <div className="px-4">
-                <div className="py-4 text-sm text-neutral-500 dark:text-neutral-400">
+                <div className="py-4 text-sm text-muted">
                   {typeof cart?.subtotal === 'number' && (
-                    <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
+                    <div className="mb-3 flex items-center justify-between border-b border-border pb-1 pt-1">
                       <p>Total</p>
                       <Price
                         amount={cart?.subtotal}
-                        className="text-right text-base text-black dark:text-white"
+                        className="text-right text-base text-foreground"
                       />
                     </div>
                   )}

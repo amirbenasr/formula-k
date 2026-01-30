@@ -72,12 +72,12 @@ export function MobileNav({ isOpen, onClose, menu }: MobileNavProps) {
       {/* Slide-out Menu */}
       <div
         className={cn(
-          'fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white dark:bg-card z-50 transform transition-transform duration-300 ease-out lg:hidden flex flex-col',
+          'fixed top-0 left-0 h-full w-[85%] max-w-sm bg-card z-50 transform transition-transform duration-300 ease-out lg:hidden flex flex-col',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <span className="text-xl font-serif font-bold text-primary">
             Formula K
           </span>
@@ -106,7 +106,7 @@ export function MobileNav({ isOpen, onClose, menu }: MobileNavProps) {
         </nav>
 
         {/* Divider */}
-        <div className="border-t border-gray-100 dark:border-border mx-6" />
+        <div className="border-t border-border mx-6" />
 
         {/* Secondary Links */}
         <div className="py-4">

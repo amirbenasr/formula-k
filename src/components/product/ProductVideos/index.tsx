@@ -131,7 +131,7 @@ export function ProductVideos({ videos, productTitle }: ProductVideosProps) {
                 onClick={() => handleVideoClick(index)}
               >
                 <div
-                  className={`relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 ${
+                  className={`relative overflow-hidden rounded-xl bg-secondary ${
                     isVertical ? 'aspect-[9/16]' : 'aspect-video'
                   }`}
                 >

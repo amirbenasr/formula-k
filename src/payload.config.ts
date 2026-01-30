@@ -22,6 +22,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
@@ -80,7 +81,19 @@ export default buildConfig({
       ]
     },
   }),
-  //email: nodemailerAdapter(),
+  email: nodemailerAdapter({
+    defaultFromAddress: process.env.SMTP_FROM_ADDRESS || 'cs@formula-k.tn',
+    defaultFromName: process.env.SMTP_FROM_NAME || 'Formula K',
+    transportOptions: {
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    },
+  }),
   endpoints: [],
   globals: [Header, Footer, SiteSettings],
   plugins,

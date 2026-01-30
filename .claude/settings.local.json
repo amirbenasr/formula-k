@@ -23,7 +23,8 @@
       "Bash(set R2_SECRET_ACCESS_KEY=temp:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

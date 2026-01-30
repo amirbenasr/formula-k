@@ -132,7 +132,7 @@ export const CheckoutPage: React.FC = () => {
       <div className="basis-full lg:basis-2/3 flex flex-col gap-8 justify-stretch">
         <h2 className="font-medium text-3xl">Contact</h2>
         {!user && (
-          <div className=" bg-accent dark:bg-black rounded-lg p-4 w-full flex items-center">
+          <div className="bg-accent/20 dark:bg-card rounded-lg p-4 w-full flex items-center">
             <div className="prose dark:prose-invert">
               <Button asChild className="no-underline text-inherit" variant="outline">
                 <Link href="/login">Log in</Link>
@@ -145,7 +145,7 @@ export const CheckoutPage: React.FC = () => {
           </div>
         )}
         {user ? (
-          <div className="bg-accent dark:bg-card rounded-lg p-4 ">
+          <div className="bg-accent/20 dark:bg-card rounded-lg p-4 ">
             <div>
               <p>{user.email}</p>{' '}
               <p>
@@ -157,7 +157,7 @@ export const CheckoutPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-accent dark:bg-black rounded-lg p-4 ">
+          <div className="bg-accent/20 dark:bg-card rounded-lg p-4 ">
             <div>
               <p className="mb-4">Enter your email to checkout as a guest.</p>
 

@@ -16,7 +16,7 @@ export async function Footer() {
   const menu = footer.navItems || []
   const currentYear = new Date().getFullYear()
   const copyrightDate = 2023 + (currentYear > 2023 ? `-${currentYear}` : '')
-  const skeleton = 'w-full h-6 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700'
+  const skeleton = 'w-full h-6 animate-pulse rounded bg-muted/30 dark:bg-muted/20'
 
   const copyrightName = COMPANY_NAME || SITE_NAME || 'Formula K'
 
@@ -36,7 +36,7 @@ export async function Footer() {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 rounded-pill border border-gray-200 dark:border-border px-6 py-3 text-sm bg-white dark:bg-card focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex-1 rounded-pill border border-border px-6 py-3 text-sm bg-card focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 type="submit"
