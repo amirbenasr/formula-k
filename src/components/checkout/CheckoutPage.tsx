@@ -7,16 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/providers/Auth'
-import { useTheme } from '@/providers/Theme'
-import { Elements } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import React, { Suspense, useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
-import { cssVariables } from '@/cssVariables'
-import { CheckoutForm } from '@/components/forms/CheckoutForm'
-import { useAddresses, useCart, usePayments } from '@payloadcms/plugin-ecommerce/client/react'
+import { useAddresses, useCart } from '@payloadcms/plugin-ecommerce/client/react'
 import { CheckoutAddresses } from '@/components/checkout/CheckoutAddresses'
 import { CreateAddressModal } from '@/components/addresses/CreateAddressModal'
 import { Address } from '@/payload-types'
@@ -26,31 +21,23 @@ import { FormItem } from '@/components/forms/FormItem'
 import { toast } from 'sonner'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 
-const apiKey = `${process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}`
-const stripe = loadStripe(apiKey)
-
 export const CheckoutPage: React.FC = () => {
   const { user } = useAuth()
   const router = useRouter()
-  const { cart } = useCart()
+  const { cart, clearCart } = useCart()
   const [error, setError] = useState<null | string>(null)
-  const { theme } = useTheme()
-  /**
-   * State to manage the email input for guest checkout.
-   */
   const [email, setEmail] = useState('')
   const [emailEditable, setEmailEditable] = useState(true)
-  const [paymentData, setPaymentData] = useState<null | Record<string, unknown>>(null)
-  const { initiatePayment } = usePayments()
   const { addresses } = useAddresses()
   const [shippingAddress, setShippingAddress] = useState<Partial<Address>>()
   const [billingAddress, setBillingAddress] = useState<Partial<Address>>()
   const [billingAddressSameAsShipping, setBillingAddressSameAsShipping] = useState(true)
-  const [isProcessingPayment, setProcessingPayment] = useState(false)
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false)
+  const [orderPlaced, setOrderPlaced] = useState(false)
 
   const cartIsEmpty = !cart || !cart.items || !cart.items.length
 
-  const canGoToPayment = Boolean(
+  const canPlaceOrder = Boolean(
     (email || user) && billingAddress && (billingAddressSameAsShipping || shippingAddress),
   )
 
@@ -76,42 +63,61 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [])
 
-  const initiatePaymentIntent = useCallback(
-    async (paymentID: string) => {
-      try {
-        const paymentData = (await initiatePayment(paymentID, {
-          additionalData: {
-            ...(email ? { customerEmail: email } : {}),
-            billingAddress,
-            shippingAddress: billingAddressSameAsShipping ? billingAddress : shippingAddress,
-          },
-        })) as Record<string, unknown>
+  const placeOrder = useCallback(async () => {
+    if (!cart?.id) {
+      setError('Cart not found')
+      return
+    }
 
-        if (paymentData) {
-          setPaymentData(paymentData)
-        }
-      } catch (error) {
-        const errorData = error instanceof Error ? JSON.parse(error.message) : {}
-        let errorMessage = 'An error occurred while initiating payment.'
+    setIsProcessingOrder(true)
+    setError(null)
 
-        if (errorData?.cause?.code === 'OutOfStock') {
-          errorMessage = 'One or more items in your cart are out of stock.'
-        }
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/checkout/cod`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartId: cart.id,
+          customerEmail: user?.email || email,
+          userId: user?.id || null,
+          billingAddress,
+          shippingAddress: billingAddressSameAsShipping ? billingAddress : shippingAddress,
+        }),
+      })
 
-        setError(errorMessage)
-        toast.error(errorMessage)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to place order')
       }
-    },
-    [billingAddress, billingAddressSameAsShipping, shippingAddress],
-  )
 
-  if (!stripe) return null
+      // Clear the cart
+      clearCart()
+      setOrderPlaced(true)
 
-  if (cartIsEmpty && isProcessingPayment) {
+      toast.success('Order placed successfully!')
+
+      // Redirect to order page
+      const customerEmail = user?.email || email
+      const redirectUrl = `/orders/${data.orderId}${customerEmail ? `?email=${customerEmail}` : ''}`
+      router.push(redirectUrl)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsProcessingOrder(false)
+    }
+  }, [cart?.id, user, email, billingAddress, shippingAddress, billingAddressSameAsShipping, clearCart, router])
+
+  if (isProcessingOrder || orderPlaced) {
     return (
-      <div className="py-12 w-full items-center justify-center">
+      <div className="py-12 w-full flex flex-col items-center justify-center">
         <div className="prose dark:prose-invert text-center max-w-none self-center mb-8">
-          <p>Processing your payment...</p>
+          <p>{orderPlaced ? 'Order placed! Redirecting...' : 'Processing your order...'}</p>
         </div>
         <LoadingSpinner />
       </div>
@@ -195,7 +201,7 @@ export const CheckoutPage: React.FC = () => {
               actions={
                 <Button
                   variant={'outline'}
-                  disabled={Boolean(paymentData)}
+                  disabled={isProcessingOrder}
                   onClick={(e) => {
                     e.preventDefault()
                     setBillingAddress(undefined)
@@ -223,7 +229,7 @@ export const CheckoutPage: React.FC = () => {
           <Checkbox
             id="shippingTheSameAsBilling"
             checked={billingAddressSameAsShipping}
-            disabled={Boolean(paymentData || (!user && (!email || Boolean(emailEditable))))}
+            disabled={!user && (!email || Boolean(emailEditable))}
             onCheckedChange={(state) => {
               setBillingAddressSameAsShipping(state as boolean)
             }}
@@ -239,7 +245,7 @@ export const CheckoutPage: React.FC = () => {
                   actions={
                     <Button
                       variant={'outline'}
-                      disabled={Boolean(paymentData)}
+                      disabled={isProcessingOrder}
                       onClick={(e) => {
                         e.preventDefault()
                         setShippingAddress(undefined)
@@ -269,86 +275,38 @@ export const CheckoutPage: React.FC = () => {
           </>
         )}
 
-        {!paymentData && (
-          <Button
-            className="self-start"
-            disabled={!canGoToPayment}
-            onClick={(e) => {
-              e.preventDefault()
-              void initiatePaymentIntent('stripe')
-            }}
-          >
-            Go to payment
-          </Button>
-        )}
-
-        {!paymentData?.['clientSecret'] && error && (
-          <div className="my-8">
+        {error && (
+          <div className="my-4">
             <Message error={error} />
-
-            <Button
-              onClick={(e) => {
-                e.preventDefault()
-                router.refresh()
-              }}
-              variant="default"
-            >
-              Try again
-            </Button>
           </div>
         )}
 
-        <Suspense fallback={<React.Fragment />}>
-          {/* @ts-ignore */}
-          {paymentData && paymentData?.['clientSecret'] && (
-            <div className="pb-16">
-              <h2 className="font-medium text-3xl">Payment</h2>
-              {error && <p>{`Error: ${error}`}</p>}
-              <Elements
-                options={{
-                  appearance: {
-                    theme: 'stripe',
-                    variables: {
-                      borderRadius: '6px',
-                      colorPrimary: '#858585',
-                      gridColumnSpacing: '20px',
-                      gridRowSpacing: '20px',
-                      colorBackground: theme === 'dark' ? '#0a0a0a' : cssVariables.colors.base0,
-                      colorDanger: cssVariables.colors.error500,
-                      colorDangerText: cssVariables.colors.error500,
-                      colorIcon:
-                        theme === 'dark' ? cssVariables.colors.base0 : cssVariables.colors.base1000,
-                      colorText: theme === 'dark' ? '#858585' : cssVariables.colors.base1000,
-                      colorTextPlaceholder: '#858585',
-                      fontFamily: 'Geist, sans-serif',
-                      fontSizeBase: '16px',
-                      fontWeightBold: '600',
-                      fontWeightNormal: '500',
-                      spacingUnit: '4px',
-                    },
-                  },
-                  clientSecret: paymentData['clientSecret'] as string,
-                }}
-                stripe={stripe}
-              >
-                <div className="flex flex-col gap-8">
-                  <CheckoutForm
-                    customerEmail={email}
-                    billingAddress={billingAddress}
-                    setProcessingPayment={setProcessingPayment}
-                  />
-                  <Button
-                    variant="ghost"
-                    className="self-start"
-                    onClick={() => setPaymentData(null)}
-                  >
-                    Cancel payment
-                  </Button>
-                </div>
-              </Elements>
+        <div className="border-t pt-8 mt-4">
+          <h2 className="font-medium text-3xl mb-4">Payment Method</h2>
+          <div className="bg-accent/20 dark:bg-card rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-white"></div>
+              </div>
+              <span className="font-medium text-lg">Cash on Delivery</span>
             </div>
-          )}
-        </Suspense>
+            <p className="text-muted-foreground text-sm">
+              Pay when you receive your order. Our delivery agent will collect the payment at your doorstep.
+            </p>
+          </div>
+        </div>
+
+        <Button
+          className="self-start mt-4"
+          size="lg"
+          disabled={!canPlaceOrder || isProcessingOrder}
+          onClick={(e) => {
+            e.preventDefault()
+            void placeOrder()
+          }}
+        >
+          {isProcessingOrder ? 'Placing Order...' : 'Place Order'}
+        </Button>
       </div>
 
       {!cartIsEmpty && (

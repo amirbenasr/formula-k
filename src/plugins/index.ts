@@ -6,8 +6,6 @@ import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/
 import { s3Storage } from '@payloadcms/storage-s3'
 import { Plugin } from 'payload'
 
-import { stripeAdapter } from '@payloadcms/plugin-ecommerce/payments/stripe'
-
 import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
 import { adminOrPublishedStatus } from '@/access/adminOrPublishedStatus'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
@@ -102,20 +100,8 @@ export const plugins: Plugin[] = [
     customers: {
       slug: 'users',
     },
-    payments:
-      process.env.STRIPE_SECRET_KEY &&
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
-      process.env.STRIPE_WEBHOOKS_SIGNING_SECRET
-        ? {
-            paymentMethods: [
-              stripeAdapter({
-                secretKey: process.env.STRIPE_SECRET_KEY,
-                publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-                webhookSecret: process.env.STRIPE_WEBHOOKS_SIGNING_SECRET,
-              }),
-            ],
-          }
-        : undefined,
+    // Online payments disabled - using Cash on Delivery only
+    payments: undefined,
     products: {
       productsCollectionOverride: ProductsCollection,
     },

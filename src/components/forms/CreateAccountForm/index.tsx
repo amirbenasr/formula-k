@@ -6,10 +6,9 @@ import { Message } from '@/components/Message'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/providers/Auth'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import React, { useCallback, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import React, { Fragment, useCallback, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 type FormData = {
@@ -21,10 +20,9 @@ type FormData = {
 export const CreateAccountForm: React.FC = () => {
   const searchParams = useSearchParams()
   const allParams = searchParams.toString() ? `?${searchParams.toString()}` : ''
-  const { login } = useAuth()
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<null | string>(null)
+  const [success, setSuccess] = useState(false)
 
   const {
     formState: { errors },
@@ -38,46 +36,60 @@ export const CreateAccountForm: React.FC = () => {
 
   const onSubmit = useCallback(
     async (data: FormData) => {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users`, {
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-      })
-
-      if (!response.ok) {
-        const message = response.statusText || 'There was an error creating the account.'
-        setError(message)
-        return
-      }
-
-      const redirect = searchParams.get('redirect')
-
-      const timer = setTimeout(() => {
-        setLoading(true)
-      }, 1000)
+      setLoading(true)
+      setError(null)
 
       try {
-        await login(data)
-        clearTimeout(timer)
-        if (redirect) router.push(redirect)
-        else router.push(`/account?success=${encodeURIComponent('Account created successfully')}`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users`, {
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          method: 'POST',
+        })
+
+        if (!response.ok) {
+          const result = await response.json()
+          const message =
+            result?.errors?.[0]?.message ||
+            response.statusText ||
+            'There was an error creating the account.'
+          setError(message)
+          return
+        }
+
+        setSuccess(true)
       } catch (_) {
-        clearTimeout(timer)
-        setError('There was an error with the credentials provided. Please try again.')
+        setError('There was an error creating your account. Please try again.')
+      } finally {
+        setLoading(false)
       }
     },
-    [login, router, searchParams],
+    [],
   )
+
+  if (success) {
+    return (
+      <Fragment>
+        <h2 className="text-xl mb-4">Check Your Email</h2>
+        <div className="prose dark:prose-invert mb-8">
+          <p>
+            Your account has been created successfully! We&apos;ve sent a verification email to your
+            inbox. Please click the link in the email to verify your account.
+          </p>
+          <p>
+            Once verified, you can{' '}
+            <Link href={`/login${allParams}`}>login to your account</Link>.
+          </p>
+        </div>
+      </Fragment>
+    )
+  }
 
   return (
     <form className="max-w-lg py-4" onSubmit={handleSubmit(onSubmit)}>
       <div className="prose dark:prose-invert mb-6">
-        <p>
-          {`This is where new customers can signup and create a new account. To manage all users, `}
-          <Link href="/admin/collections/users">login to the admin dashboard</Link>.
-        </p>
+        <p>Create an account to start shopping and track your orders.</p>
       </div>
 
       <Message error={error} />
@@ -97,11 +109,17 @@ export const CreateAccountForm: React.FC = () => {
 
         <FormItem>
           <Label htmlFor="password" className="mb-2">
-            New password
+            Password
           </Label>
           <Input
             id="password"
-            {...register('password', { required: 'Password is required.' })}
+            {...register('password', {
+              required: 'Password is required.',
+              minLength: {
+                value: 8,
+                message: 'Password must be at least 8 characters.',
+              },
+            })}
             type="password"
           />
           {errors.password && <FormError message={errors.password.message} />}
@@ -123,7 +141,7 @@ export const CreateAccountForm: React.FC = () => {
         </FormItem>
       </div>
       <Button disabled={loading} type="submit" variant="default">
-        {loading ? 'Processing' : 'Create Account'}
+        {loading ? 'Creating Account...' : 'Create Account'}
       </Button>
 
       <div className="prose dark:prose-invert mt-8">

@@ -1,3 +1,9 @@
+/**
+ * NOTE: This component is currently NOT USED.
+ * It was designed for Stripe online payments.
+ * Currently, the store uses Cash on Delivery only.
+ * Keep this file for when online payments are re-enabled.
+ */
 'use client'
 
 import { Message } from '@/components/Message'
