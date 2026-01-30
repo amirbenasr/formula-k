@@ -175,5 +175,121 @@ export const Users: CollectionConfig = {
         defaultColumns: ['id'],
       },
     },
+    // Rewards Program Fields
+    {
+      name: 'rewardsEnabled',
+      type: 'checkbox',
+      label: 'Rewards Member',
+      defaultValue: false,
+      admin: {
+        description: 'Whether this user has joined the Glow Rewards program',
+      },
+    },
+    {
+      name: 'rewardPoints',
+      type: 'number',
+      label: 'Current Points Balance',
+      defaultValue: 0,
+      admin: {
+        description: 'Current available points to spend',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'lifetimePoints',
+      type: 'number',
+      label: 'Lifetime Points Earned',
+      defaultValue: 0,
+      admin: {
+        description: 'Total points ever earned (used for tier calculation)',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'rewardTier',
+      type: 'relationship',
+      relationTo: 'reward-tiers',
+      hasMany: false,
+      label: 'Current Tier',
+      admin: {
+        description: 'Current rewards tier based on lifetime points',
+      },
+    },
+    {
+      name: 'referralCode',
+      type: 'text',
+      label: 'Referral Code',
+      unique: true,
+      admin: {
+        description: 'Unique code for referring friends',
+      },
+    },
+    {
+      name: 'referredBy',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: false,
+      label: 'Referred By',
+      admin: {
+        description: 'User who referred this customer',
+      },
+    },
+    {
+      name: 'referralCount',
+      type: 'number',
+      label: 'Successful Referrals',
+      defaultValue: 0,
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'lastCheckIn',
+      type: 'date',
+      label: 'Last Daily Check-in',
+      admin: {
+        description: 'Last time user checked in for daily points',
+      },
+    },
+    {
+      name: 'checkInStreak',
+      type: 'number',
+      label: 'Check-in Streak',
+      defaultValue: 0,
+      admin: {
+        description: 'Consecutive days of check-ins',
+      },
+    },
+    {
+      name: 'birthday',
+      type: 'date',
+      label: 'Birthday',
+      admin: {
+        description: 'For birthday bonus points',
+      },
+    },
+    {
+      name: 'rewardsJoinedAt',
+      type: 'date',
+      label: 'Rewards Program Join Date',
+    },
+    {
+      name: 'profileComplete',
+      type: 'checkbox',
+      label: 'Profile Completed',
+      defaultValue: false,
+      admin: {
+        description: 'Whether user has completed their profile for bonus points',
+      },
+    },
+    {
+      name: 'socialFollowed',
+      type: 'checkbox',
+      label: 'Social Media Followed',
+      defaultValue: false,
+      admin: {
+        description: 'Whether user has followed on social media for bonus points',
+      },
+    },
   ],
 }

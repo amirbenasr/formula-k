@@ -19,6 +19,7 @@ import { Categories } from '@/collections/Categories'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Users } from '@/collections/Users'
+import { RewardTiers, RewardTransactions, RewardsCatalog } from '@/collections/Rewards'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
@@ -40,7 +41,7 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Pages, Categories, Brands, Media],
+  collections: [Users, Pages, Categories, Brands, Media, RewardTiers, RewardTransactions, RewardsCatalog],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',

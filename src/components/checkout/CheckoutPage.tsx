@@ -100,6 +100,15 @@ export const CheckoutPage: React.FC = () => {
 
       toast.success('Order placed successfully!')
 
+      // Show points earned if applicable
+      if (data.pointsEarned && data.pointsEarned > 0) {
+        setTimeout(() => {
+          toast.success(`You earned ${data.pointsEarned} Glow Rewards points! ✨`, {
+            duration: 5000,
+          })
+        }, 1000)
+      }
+
       // Redirect to order page
       const customerEmail = user?.email || email
       const redirectUrl = `/orders/${data.orderId}${customerEmail ? `?email=${customerEmail}` : ''}`

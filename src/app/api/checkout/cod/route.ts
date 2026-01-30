@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { NextRequest, NextResponse } from 'next/server'
+import { awardPoints, processReferralReward } from '@/utilities/rewards'
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,10 +115,54 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Award rewards points if user is a member
+    let pointsEarned = 0
+    if (userId) {
+      const user = await payload.findByID({
+        collection: 'users',
+        id: userId,
+      })
+
+      if (user?.rewardsEnabled) {
+        // Award points based on order total (1 point per TND, with tier multiplier)
+        const result = await awardPoints(payload, userId, 'purchase', {
+          points: Math.floor(total),
+          description: `Order #${order.id} - Earned ${Math.floor(total)} base points`,
+          orderId: order.id,
+        })
+        pointsEarned = result.pointsAwarded
+
+        // Check if this is first order from a referred user
+        if (user.referredBy) {
+          const referrerId = typeof user.referredBy === 'object'
+            ? user.referredBy.id
+            : user.referredBy
+
+          // Check if referrer already got reward for this user
+          const existingReferralReward = await payload.find({
+            collection: 'reward-transactions',
+            where: {
+              and: [
+                { user: { equals: referrerId } },
+                { action: { equals: 'referral' } },
+                { 'metadata.referredUser': { equals: userId } },
+              ],
+            },
+            limit: 1,
+          })
+
+          if (existingReferralReward.docs.length === 0) {
+            await processReferralReward(payload, referrerId, userId)
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       orderId: order.id,
       message: 'Order placed successfully. Pay on delivery.',
+      pointsEarned,
     })
   } catch (error) {
     console.error('COD checkout error:', error)

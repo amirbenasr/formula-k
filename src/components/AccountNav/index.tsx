@@ -52,6 +52,20 @@ export const AccountNav: React.FC<Props> = ({ className }) => {
             <Link href="/orders">Orders</Link>
           </Button>
         </li>
+
+        <li>
+          <Button
+            asChild
+            variant="link"
+            className={clsx('text-primary/50 hover:text-primary hover:no-underline', {
+              'text-primary': pathname === '/account/rewards' || pathname.includes('/account/rewards'),
+            })}
+          >
+            <Link href="/account/rewards" className="flex items-center gap-2">
+              <span>✨</span> Glow Rewards
+            </Link>
+          </Button>
+        </li>
       </ul>
 
       <hr className="w-full border-white/5" />

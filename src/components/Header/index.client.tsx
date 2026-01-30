@@ -15,6 +15,7 @@ import { LogoIcon } from '@/components/icons/logo'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utilities/cn'
 import { useAuth } from '@/providers/Auth'
+import { RewardsHeaderWidget } from '@/components/rewards/RewardsHeaderWidget'
 
 type Props = {
   header: Header
@@ -77,6 +78,9 @@ export function HeaderClient({ header }: Props) {
 
           {/* Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
+            {/* Rewards Widget */}
+            <RewardsHeaderWidget />
+
             {/* Search */}
             <button
               className="p-2 text-muted hover:text-foreground transition-colors"
