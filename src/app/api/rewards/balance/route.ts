@@ -1,17 +1,17 @@
-import { getPayload } from 'payload'
+import type { RewardTier } from '@/payload-types'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const payload = await getPayload({ config })
 
     // Get current user from auth
     const headersList = await headers()
-    const cookieStore = await cookies()
 
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current tier details
-    let tier = null
+    let tier: RewardTier | null = null
     if (user.rewardTier) {
       const tierId = typeof user.rewardTier === 'object' ? user.rewardTier.id : user.rewardTier
       tier = await payload.findByID({
@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get next tier
-    let nextTier = null
+    let nextTier: RewardTier | null = null
     let pointsToNextTier = 0
-    if (tier) {
+    if (tier && typeof tier.minPoints === 'number') {
       const nextTiers = await payload.find({
         collection: 'reward-tiers',
         where: {
@@ -48,7 +48,9 @@ export async function GET(request: NextRequest) {
       })
       if (nextTiers.docs[0]) {
         nextTier = nextTiers.docs[0]
-        pointsToNextTier = nextTier.minPoints - (user.lifetimePoints || 0)
+        pointsToNextTier =
+          (typeof nextTier.minPoints === 'number' ? nextTier.minPoints : 0) -
+          (user.lifetimePoints || 0)
       }
     }
 

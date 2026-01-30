@@ -1,10 +1,10 @@
-import { getPayload } from 'payload'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
 
 // Generate a unique referral code
-function generateReferralCode(userId: number): string {
+function generateReferralCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = 'GLOW'
   for (let i = 0; i < 6; i++) {
@@ -19,9 +19,8 @@ export async function POST(request: NextRequest) {
 
     // Get current user from auth
     const headersList = await headers()
-    const cookieStore = await cookies()
 
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -44,8 +43,8 @@ export async function POST(request: NextRequest) {
 
     const starterTier = tiers.docs[0]
 
-    // Handle referral if provided
-    let referrer = null
+    // Handle referral if provided. Only need referrer's id
+    let referrer: { id?: number } | null = null
     if (referralCode) {
       const referrers = await payload.find({
         collection: 'users',
@@ -53,12 +52,12 @@ export async function POST(request: NextRequest) {
         limit: 1,
       })
       if (referrers.docs[0] && referrers.docs[0].id !== user.id) {
-        referrer = referrers.docs[0]
+        referrer = { id: referrers.docs[0].id as number }
       }
     }
 
     // Generate unique referral code for this user
-    let newReferralCode = generateReferralCode(user.id)
+    let newReferralCode = generateReferralCode()
     let codeExists = true
     let attempts = 0
     while (codeExists && attempts < 10) {
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
       if (existing.docs.length === 0) {
         codeExists = false
       } else {
-        newReferralCode = generateReferralCode(user.id)
+        newReferralCode = generateReferralCode()
         attempts++
       }
     }

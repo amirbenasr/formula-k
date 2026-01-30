@@ -1,7 +1,7 @@
-import { getPayload } from 'payload'
+import { awardPoints, processReferralReward } from '@/utilities/rewards'
 import config from '@payload-config'
 import { NextRequest, NextResponse } from 'next/server'
-import { awardPoints, processReferralReward } from '@/utilities/rewards'
+import { getPayload } from 'payload'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,14 +35,14 @@ export async function POST(request: NextRequest) {
       const variant = typeof item.variant === 'object' ? item.variant : null
 
       if (variant) {
-        if (variant.inventory !== null && variant.inventory < item.quantity) {
+        if (variant.inventory != null && variant.inventory < item.quantity) {
           return NextResponse.json(
             { error: `Not enough stock for ${product?.title || 'item'}` },
             { status: 400 },
           )
         }
       } else if (product) {
-        if (product.inventory !== null && product.inventory < item.quantity) {
+        if (product.inventory != null && product.inventory < item.quantity) {
           return NextResponse.json(
             { error: `Not enough stock for ${product.title}` },
             { status: 400 },
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       const product = typeof item.product === 'object' ? item.product : null
       const variant = typeof item.variant === 'object' ? item.variant : null
 
-      if (variant && variant.inventory !== null) {
+      if (variant && typeof variant.inventory === 'number') {
         await payload.update({
           collection: 'variants',
           id: variant.id,
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             inventory: variant.inventory - item.quantity,
           },
         })
-      } else if (product && product.inventory !== null) {
+      } else if (product && typeof product.inventory === 'number') {
         await payload.update({
           collection: 'products',
           id: product.id,
@@ -134,9 +134,8 @@ export async function POST(request: NextRequest) {
 
         // Check if this is first order from a referred user
         if (user.referredBy) {
-          const referrerId = typeof user.referredBy === 'object'
-            ? user.referredBy.id
-            : user.referredBy
+          const referrerId =
+            typeof user.referredBy === 'object' ? user.referredBy.id : user.referredBy
 
           // Check if referrer already got reward for this user
           const existingReferralReward = await payload.find({

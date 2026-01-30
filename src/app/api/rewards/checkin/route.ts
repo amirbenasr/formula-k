@@ -1,20 +1,20 @@
-import { getPayload } from 'payload'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
+import type { Payload } from 'payload'
 
 const CHECKIN_POINTS = 5
 const STREAK_BONUS_DAYS = 7
 const STREAK_BONUS_POINTS = 50
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const payload = await getPayload({ config })
 
     const headersList = await headers()
-    const cookieStore = await cookies()
 
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -34,10 +34,13 @@ export async function POST(request: NextRequest) {
 
     // Check if already checked in today
     if (lastCheckIn && lastCheckIn.getTime() === today.getTime()) {
-      return NextResponse.json({
-        error: 'Already checked in today',
-        nextCheckIn: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString(),
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Already checked in today',
+          nextCheckIn: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        },
+        { status: 400 },
+      )
     }
 
     // Calculate streak
@@ -107,14 +110,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Check-in error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred during check-in' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'An error occurred during check-in' }, { status: 500 })
   }
 }
 
-async function updateUserTier(payload: any, userId: number, lifetimePoints: number) {
+async function updateUserTier(payload: Payload, userId: number, lifetimePoints: number) {
   // Find appropriate tier based on lifetime points
   const tiers = await payload.find({
     collection: 'reward-tiers',

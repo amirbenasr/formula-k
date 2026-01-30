@@ -1,7 +1,8 @@
-import { getPayload } from 'payload'
+import type { RewardsCatalog } from '@/payload-types'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
 
 // Default tiers configuration
 const defaultTiers = [
@@ -70,7 +71,7 @@ const defaultTiers = [
 ]
 
 // Default rewards configuration
-const defaultRewards = [
+const defaultRewards: Partial<RewardsCatalog>[] = [
   {
     name: 'Free Sample Pack',
     description: 'Get a surprise sample with your next order',
@@ -158,14 +159,13 @@ const defaultRewards = [
   },
 ]
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const payload = await getPayload({ config })
 
     // Check if user is admin
     const headersList = await headers()
-    const cookieStore = await cookies()
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user || !user.roles?.includes('admin')) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
         await payload.create({
           collection: 'reward-tiers',
           data: tier,
+          draft: true,
         })
         results.tiers.created++
       } else {
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
         await payload.create({
           collection: 'rewards-catalog',
           data: reward,
+          draft: true,
         })
         results.rewards.created++
       } else {
@@ -223,9 +225,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Seed error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred while seeding data' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'An error occurred while seeding data' }, { status: 500 })
   }
 }

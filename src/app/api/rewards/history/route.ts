@@ -1,16 +1,15 @@
-import { getPayload } from 'payload'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
 
 export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config })
 
     const headersList = await headers()
-    const cookieStore = await cookies()
 
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -26,14 +25,11 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
     const type = searchParams.get('type') // 'earned', 'redeemed', or null for all
 
-    // Build query
-    const where: any = {
-      user: { equals: user.id },
-    }
-
-    if (type && ['earned', 'redeemed', 'expired', 'adjusted'].includes(type)) {
-      where.type = { equals: type }
-    }
+    // Build query (inlined to match payload types)
+    const where =
+      type && ['earned', 'redeemed', 'expired', 'adjusted'].includes(type)
+        ? ({ user: { equals: user.id }, type: { equals: type } } as unknown as Parameters<typeof payload.find>[0]['where'])
+        : ({ user: { equals: user.id } } as unknown as Parameters<typeof payload.find>[0]['where'])
 
     const transactions = await payload.find({
       collection: 'reward-transactions',

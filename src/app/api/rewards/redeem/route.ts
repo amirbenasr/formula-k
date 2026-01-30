@@ -1,16 +1,15 @@
-import { getPayload } from 'payload'
 import config from '@payload-config'
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers, cookies } from 'next/headers'
+import { getPayload } from 'payload'
 
 export async function POST(request: NextRequest) {
   try {
     const payload = await getPayload({ config })
 
     const headersList = await headers()
-    const cookieStore = await cookies()
 
-    const { user } = await payload.auth({ headers: headersList, cookies: cookieStore })
+    const { user } = await payload.auth({ headers: headersList })
 
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
@@ -53,20 +52,24 @@ export async function POST(request: NextRequest) {
 
     // Check if user has enough points
     if ((user.rewardPoints || 0) < reward.pointsCost) {
-      return NextResponse.json({
-        error: 'Not enough points',
-        required: reward.pointsCost,
-        available: user.rewardPoints || 0,
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: 'Not enough points',
+          required: reward.pointsCost,
+          available: user.rewardPoints || 0,
+        },
+        { status: 400 },
+      )
     }
 
     // Check tier requirement
     if (reward.minimumTier) {
-      const requiredTierId = typeof reward.minimumTier === 'object'
-        ? reward.minimumTier.id
-        : reward.minimumTier
+      const requiredTierId =
+        typeof reward.minimumTier === 'object' ? reward.minimumTier.id : reward.minimumTier
       const userTierId = user.rewardTier
-        ? (typeof user.rewardTier === 'object' ? user.rewardTier.id : user.rewardTier)
+        ? typeof user.rewardTier === 'object'
+          ? user.rewardTier.id
+          : user.rewardTier
         : null
 
       if (!userTierId) {
@@ -84,9 +87,12 @@ export async function POST(request: NextRequest) {
       })
 
       if (userTier.order < requiredTier.order) {
-        return NextResponse.json({
-          error: `This reward requires ${requiredTier.name} tier or higher`,
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            error: `This reward requires ${requiredTier.name} tier or higher`,
+          },
+          { status: 400 },
+        )
       }
     }
 
@@ -104,9 +110,12 @@ export async function POST(request: NextRequest) {
       })
 
       if (userRedemptions.totalDocs >= reward.limitPerUser) {
-        return NextResponse.json({
-          error: 'You have reached the maximum redemptions for this reward',
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            error: 'You have reached the maximum redemptions for this reward',
+          },
+          { status: 400 },
+        )
       }
     }
 
@@ -156,8 +165,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Generate redemption code for discount rewards
-    let redemptionCode = null
-    if (reward.type === 'discount_amount' || reward.type === 'discount_percent' || reward.type === 'free_shipping') {
+    let redemptionCode: string | null = null
+    if (
+      reward.type === 'discount_amount' ||
+      reward.type === 'discount_percent' ||
+      reward.type === 'free_shipping'
+    ) {
       redemptionCode = `GLOW${user.id}${Date.now().toString(36).toUpperCase()}`
     }
 
