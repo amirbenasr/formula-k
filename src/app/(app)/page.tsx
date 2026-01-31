@@ -141,38 +141,44 @@ export default async function HomePage() {
             {[
               {
                 name: 'Nettoyants',
+                slug: 'nettoyants',
                 image:
                   'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop',
               },
               {
                 name: 'Toniques',
+                slug: 'toniques',
                 image:
                   'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=200&h=200&fit=crop',
               },
               {
                 name: 'Sérums',
+                slug: 'serums',
                 image:
                   'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=200&h=200&fit=crop',
               },
               {
                 name: 'Crèmes',
+                slug: 'cremes',
                 image:
                   'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=200&h=200&fit=crop',
               },
               {
                 name: 'Masques',
+                slug: 'masques',
                 image:
                   'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=200&h=200&fit=crop',
               },
               {
                 name: 'Solaires',
+                slug: 'solaires',
                 image:
                   'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=200&h=200&fit=crop',
               },
             ].map((category) => (
               <Link
                 key={category.name}
-                href={`/products?category=${category.name.toLowerCase()}`}
+                href={`/shop/${category.slug}`}
                 className="group text-center"
               >
                 <div className="relative aspect-square rounded-full overflow-hidden mb-3 mx-auto w-24 lg:w-32 border-2 border-transparent group-hover:border-primary transition-colors">

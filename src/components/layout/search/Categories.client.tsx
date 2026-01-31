@@ -1,45 +1,50 @@
 'use client'
-import React, { useCallback, useMemo } from 'react'
+import React, { useMemo } from 'react'
 
 import { Category } from '@/payload-types'
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
+import Link from 'next/link'
 
 type Props = {
   category: Category
 }
 
 export const CategoryItem: React.FC<Props> = ({ category }) => {
-  const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   const isActive = useMemo(() => {
-    return searchParams.get('category') === String(category.id)
-  }, [category.id, searchParams])
+    return pathname === `/shop/${category.slug}`
+  }, [category.slug, pathname])
 
-  const setQuery = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString())
-
-    if (isActive) {
-      params.delete('category')
-    } else {
-      params.set('category', String(category.id))
-    }
-
-    const newParams = params.toString()
-
-    router.push(pathname + '?' + newParams)
-  }, [category.id, isActive, pathname, router, searchParams])
+  const href = isActive ? '/shop' : `/shop/${category.slug}`
 
   return (
-    <button
-      onClick={() => setQuery()}
+    <Link
+      href={href}
       className={clsx('hover:cursor-pointer', {
         ' underline': isActive,
       })}
     >
       {category.title}
-    </button>
+    </Link>
+  )
+}
+
+export const AllProductsLink: React.FC = () => {
+  const pathname = usePathname()
+
+  const isOnCategoryPage = useMemo(() => {
+    return pathname.startsWith('/shop/') && pathname !== '/shop'
+  }, [pathname])
+
+  if (!isOnCategoryPage) {
+    return null
+  }
+
+  return (
+    <Link href="/shop" className="hover:cursor-pointer text-muted hover:underline">
+      Tous les Produits
+    </Link>
   )
 }
