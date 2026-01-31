@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
     // Build query (inlined to match payload types)
     const where =
       type && ['earned', 'redeemed', 'expired', 'adjusted'].includes(type)
-        ? ({ user: { equals: user.id }, type: { equals: type } } as unknown as Parameters<typeof payload.find>[0]['where'])
+        ? ({ user: { equals: user.id }, type: { equals: type } } as unknown as Parameters<
+            typeof payload.find
+          >[0]['where'])
         : ({ user: { equals: user.id } } as unknown as Parameters<typeof payload.find>[0]['where'])
 
     const transactions = await payload.find({

@@ -45,6 +45,9 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
+      ssl: {
+        rejectUnauthorized: true,
+      },
     },
   }),
   editor: lexicalEditor({

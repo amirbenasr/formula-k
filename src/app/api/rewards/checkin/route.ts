@@ -1,8 +1,8 @@
 import config from '@payload-config'
 import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
 import type { Payload } from 'payload'
+import { getPayload } from 'payload'
 
 const CHECKIN_POINTS = 5
 const STREAK_BONUS_DAYS = 7
