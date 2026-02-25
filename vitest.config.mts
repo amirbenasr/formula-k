@@ -3,10 +3,25 @@ import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
-    include: ['tests/int/**/*.int.spec.ts'],
+    projects: [
+      {
+        plugins: [tsconfigPaths(), react()],
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        plugins: [tsconfigPaths(), react()],
+        test: {
+          name: 'int',
+          environment: 'node',
+          setupFiles: ['./vitest.setup.ts'],
+          include: ['tests/int/**/*.int.spec.ts'],
+        },
+      },
+    ],
   },
 })

@@ -27,7 +27,16 @@
       "Bash(findstr:*)",
       "WebFetch(domain:beautyofjoseon.com)",
       "Bash(npx husky init)",
-      "Bash(vercel --version:*)"
+      "Bash(vercel --version:*)",
+      "Bash(pnpm test:unit:*)",
+      "Bash(python3:*)",
+      "Bash(node -e:*)",
+      "Bash(pnpm dev)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiY29sbGVjdGlvbiI6InVzZXJzIiwiZW1haWwiOiJhbWlyYmVubmFzckBnbWFpbC5jb20iLCJzaWQiOiI3YjM5NjBkNi1kNTc5LTRlYzMtOGFmYy1hMDU1NjMwZGM3MDIiLCJpYXQiOjE3NzEyNzE3NTIsImV4cCI6MTc3MjQ4MTM1Mn0.QZ3GJQQipQcegBYEa8mHUpaPZXOYCtUPXhY-FeExADo\")",
+      "Bash(taskkill //F //IM \"node.exe\" //T)",
+      "Bash(cd C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k:*)",
+      "Bash(cd \"C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k\" && npx playwright test 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k\" && rm -rf test-results/ && npx playwright test 2>&1)"
     ]
   }
 }
