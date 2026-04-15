@@ -27,35 +27,35 @@
   --font-mono: var(--font-geist-mono), monospace;
   --font-serif: var(--font-cormorant), 'Cormorant Garamond', 'Playfair Display', serif;
 
-  /* Colors - Warm palette (Rose/Peach) - Default */
-  --color-primary-50: #fdf8f8;
-  --color-primary-100: #faf0f1;
-  --color-primary-200: #f5e0e2;
-  --color-primary-300: #efd0d3;
-  --color-primary-400: #ecc2c5;
-  --color-primary-500: #e8b4b8;
-  --color-primary-600: #dd8b91;
-  --color-primary-700: #d2636b;
-  --color-primary-800: #b83d47;
-  --color-primary-900: #8a2e35;
+  /* Colors - Formula K brand (Coral / Teal) - Default */
+  --color-primary-50: #fef4f3;
+  --color-primary-100: #fde6e4;
+  --color-primary-200: #fbd1cd;
+  --color-primary-300: #f8b5af;
+  --color-primary-400: #f59a92;
+  --color-primary-500: #f28b82;
+  --color-primary-600: #e46a5f;
+  --color-primary-700: #c64d42;
+  --color-primary-800: #9e3c33;
+  --color-primary-900: #732b24;
 
-  --color-secondary-50: #ffffff;
-  --color-secondary-100: #fff5ee;
-  --color-secondary-200: #ffe6d5;
-  --color-secondary-300: #ffd7bc;
-  --color-secondary-400: #ffc8a3;
-  --color-secondary-500: #ffb98a;
+  --color-secondary-50: #fdf5f6;
+  --color-secondary-100: #fae6e9;
+  --color-secondary-200: #f6ced3;
+  --color-secondary-300: #f2a7b0;
+  --color-secondary-400: #ec8592;
+  --color-secondary-500: #e26575;
 
-  --color-accent-50: #f5f9f0;
-  --color-accent-100: #ebf3e1;
-  --color-accent-200: #d7e8c4;
-  --color-accent-300: #c3dca6;
-  --color-accent-400: #b5d296;
-  --color-accent-500: #a8c686;
-  --color-accent-600: #8db663;
-  --color-accent-700: #729a47;
-  --color-accent-800: #577536;
-  --color-accent-900: #3c5025;
+  --color-accent-50: #eff9f7;
+  --color-accent-100: #d6f1ec;
+  --color-accent-200: #b1e3d9;
+  --color-accent-300: #8ed4c8;
+  --color-accent-400: #6cbfb5;
+  --color-accent-500: #4ea89d;
+  --color-accent-600: #3c8a80;
+  --color-accent-700: #2e6d65;
+  --color-accent-800: #24544e;
+  --color-accent-900: #1a3b37;
 
   /* Colors - Cool palette shades (Blue/Lavender) */
   --color-cool-primary-50: #f5f8fc;
@@ -160,33 +160,33 @@
 }
 
 :root {
-  --background: #fafafa;
-  --foreground: #4a4a4a;
+  --background: #f5f0ee;
+  --foreground: #3d3d3d;
 
   --card: #ffffff;
-  --card-foreground: #4a4a4a;
+  --card-foreground: #3d3d3d;
 
   --popover: #ffffff;
-  --popover-foreground: #4a4a4a;
+  --popover-foreground: #3d3d3d;
 
-  --primary: #e8b4b8;
+  --primary: #f28b82;
   --primary-foreground: #ffffff;
 
-  --secondary: #fff5ee;
-  --secondary-foreground: #4a4a4a;
+  --secondary: #f2a7b0;
+  --secondary-foreground: #3d3d3d;
 
-  --muted: #67595e;
-  --muted-foreground: #67595e;
+  --muted: #6b6b6b;
+  --muted-foreground: #6b6b6b;
 
-  --accent: #a8c686;
+  --accent: #6cbfb5;
   --accent-foreground: #ffffff;
 
   --destructive: hsl(0 84.2% 60.2%);
   --destructive-foreground: hsl(210 40% 98%);
 
-  --border: hsl(240 6% 90%);
-  --input: hsl(214.3 31.8% 91.4%);
-  --ring: #e8b4b8;
+  --border: hsl(18 15% 88%);
+  --input: hsl(18 15% 90%);
+  --ring: #f28b82;
 
   --radius: 0.75rem;
 
@@ -197,24 +197,24 @@
 
 [data-theme='dark'] {
   --background: #1a1a1a;
-  --foreground: #f5f5f5;
+  --foreground: #f5f0ee;
 
   --card: #262626;
-  --card-foreground: #f5f5f5;
+  --card-foreground: #f5f0ee;
 
   --popover: #262626;
-  --popover-foreground: #f5f5f5;
+  --popover-foreground: #f5f0ee;
 
-  --primary: #e8b4b8;
+  --primary: #f28b82;
   --primary-foreground: #1a1a1a;
 
-  --secondary: #3d3d3d;
-  --secondary-foreground: #f5f5f5;
+  --secondary: #f2a7b0;
+  --secondary-foreground: #1a1a1a;
 
   --muted: #525252;
   --muted-foreground: #a3a3a3;
 
-  --accent: #a8c686;
+  --accent: #6cbfb5;
   --accent-foreground: #1a1a1a;
 
   --destructive: hsl(0 62.8% 30.6%);
@@ -222,7 +222,7 @@
 
   --border: hsla(0, 0%, 100%, 0.1);
   --input: hsla(0, 0%, 100%, 0.1);
-  --ring: #e8b4b8;
+  --ring: #f28b82;
 
   --success: hsl(196 100% 14%);
   --warning: hsl(34 51% 25%);

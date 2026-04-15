@@ -36,7 +36,10 @@
       "Bash(taskkill //F //IM \"node.exe\" //T)",
       "Bash(cd C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k:*)",
       "Bash(cd \"C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k\" && npx playwright test 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k\" && rm -rf test-results/ && npx playwright test 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Mecanique\\\\Desktop\\\\web\\\\nextjs\\\\formula-k\" && rm -rf test-results/ && npx playwright test 2>&1)",
+      "Bash(mkdir -p /home/amir/Desktop/formula-k/public)",
+      "Bash(cp \"/home/amir/Downloads/Gemini_Generated_Image_b35i7db35i7db35i-removebg-preview.png\" /home/amir/Desktop/formula-k/public/logo.png)",
+      "Bash(pnpm typecheck:*)"
     ]
   }
 }
