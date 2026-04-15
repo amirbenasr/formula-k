@@ -11,6 +11,7 @@ import { InitTheme } from '@/providers/Theme/InitTheme'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import { Inter, Cormorant_Garamond } from 'next/font/google'
 import { GeistMono } from 'geist/font/mono'
+import { draftMode } from 'next/headers'
 import React from 'react'
 import './globals.css'
 
@@ -28,6 +29,8 @@ const cormorant = Cormorant_Garamond({
 })
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
+  const { isEnabled: isDraft } = await draftMode()
+
   // Fetch site settings including color palette
   let palette: Palette = 'warm'
   try {
@@ -53,7 +56,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="flex flex-col min-h-screen">
         <Providers palette={palette}>
           <AdminBar />
-          <LivePreviewListener />
+          {isDraft && <LivePreviewListener />}
 
           <Header />
           <main className="flex-1">{children}</main>
