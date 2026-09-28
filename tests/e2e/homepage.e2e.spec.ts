@@ -15,8 +15,8 @@ test.describe('Homepage', () => {
     const discoverLink = page.getByRole('link', { name: 'Découvrir' }).first()
     await expect(discoverLink).toBeVisible()
 
-    const routinesLink = page.getByRole('link', { name: 'Voir les Routines' })
-    await expect(routinesLink).toBeVisible()
+    const newArrivalsLink = page.getByRole('link', { name: 'Nouveautés' })
+    await expect(newArrivalsLink).toBeVisible()
   })
 
   test('hero CTA link navigates to products or shop', async ({ page }) => {

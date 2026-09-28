@@ -51,7 +51,7 @@ export const CheckoutPage: React.FC = () => {
         }
       }
     }
-  }, [addresses])
+  }, [addresses, shippingAddress])
 
   useEffect(() => {
     return () => {
@@ -120,7 +120,16 @@ export const CheckoutPage: React.FC = () => {
     } finally {
       setIsProcessingOrder(false)
     }
-  }, [cart?.id, user, email, billingAddress, shippingAddress, billingAddressSameAsShipping, clearCart, router])
+  }, [
+    cart?.id,
+    user,
+    email,
+    billingAddress,
+    shippingAddress,
+    billingAddressSameAsShipping,
+    clearCart,
+    router,
+  ])
 
   if (isProcessingOrder || orderPlaced) {
     return (
@@ -137,7 +146,7 @@ export const CheckoutPage: React.FC = () => {
     return (
       <div className="prose dark:prose-invert py-12 w-full items-center">
         <p>Your cart is empty.</p>
-        <Link href="/search">Continue shopping?</Link>
+        <Link href="/shop">Continue shopping?</Link>
       </div>
     )
   }
@@ -300,7 +309,8 @@ export const CheckoutPage: React.FC = () => {
               <span className="font-medium text-lg">Cash on Delivery</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              Pay when you receive your order. Our delivery agent will collect the payment at your doorstep.
+              Pay when you receive your order. Our delivery agent will collect the payment at your
+              doorstep.
             </p>
           </div>
         </div>
@@ -325,7 +335,7 @@ export const CheckoutPage: React.FC = () => {
             if (typeof item.product === 'object' && item.product) {
               const {
                 product,
-                product: { id, meta, title, gallery },
+                product: { meta, title, gallery },
                 quantity,
                 variant,
               } = item

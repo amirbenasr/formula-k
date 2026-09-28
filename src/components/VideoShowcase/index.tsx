@@ -9,10 +9,11 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from '@/components/ui/carousel'
+import { formatPrice } from '@/lib/utils'
 import { Pause, Play, ShoppingBag, Volume2, VolumeX } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 interface VideoShowcaseProps {
   products: Product[]
@@ -31,11 +32,15 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({})
 
   // Flatten products with videos into a list of video items
-  const videoItems: VideoItem[] = products.flatMap((product) =>
-    (product.videos || []).map((video) => ({
-      product,
-      video,
-    })),
+  const videoItems: VideoItem[] = useMemo(
+    () =>
+      products.flatMap((product) =>
+        (product.videos || []).map((video) => ({
+          product,
+          video,
+        })),
+      ),
+    [products],
   )
 
   // Handle carousel scroll events and auto-play centered video
@@ -63,7 +68,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
       clearTimeout(timer)
       api.off('select', onSelect)
     }
-  }, [api, videoItems.length])
+  }, [api, videoItems])
 
   // Click handler to center and play a video
   const handleVideoClick = useCallback(
@@ -141,8 +146,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
   }
 
   const getProductPrice = (product: Product): string => {
-    const price = product.priceInUSD || 0
-    return `${price.toFixed(2)} TND`
+    return formatPrice(product.priceInUSD || 0)
   }
 
   const getProductImage = (product: Product): string | null => {
