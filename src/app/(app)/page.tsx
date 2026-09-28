@@ -1,3 +1,5 @@
+import { Grid } from '@/components/Grid'
+import { ProductGridItem } from '@/components/ProductGridItem'
 import { VideoShowcase } from '@/components/VideoShowcase'
 import config from '@payload-config'
 import { ArrowRight, Droplets, Heart, Sparkles, Sun } from 'lucide-react'
@@ -19,6 +21,26 @@ export default async function HomePage() {
     limit: 10,
   })
 
+  // Newest in-stock products, so the storefront is never empty on first load.
+  const { docs: featuredProducts } = await payload.find({
+    collection: 'products',
+    where: {
+      _status: {
+        equals: 'published',
+      },
+    },
+    sort: '-createdAt',
+    limit: 8,
+    depth: 1,
+    overrideAccess: false,
+    select: {
+      title: true,
+      slug: true,
+      gallery: true,
+      priceInUSD: true,
+    },
+  })
+
   // Fetch products featured in video showcase
   const { docs: allVideoShowcaseProducts } = await payload.find({
     collection: 'products',
@@ -29,6 +51,7 @@ export default async function HomePage() {
     },
     limit: 20,
     depth: 2,
+    overrideAccess: false,
   })
 
   // Filter to only include products that have videos
@@ -51,12 +74,12 @@ export default async function HomePage() {
                 Les meilleurs produits K-Beauty sélectionnés pour révéler votre éclat naturel
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/products" className="btn-primary">
+                <Link href="/shop" className="btn-primary">
                   Découvrir
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
-                <Link href="/routines" className="btn-outline">
-                  Voir les Routines
+                <Link href="/shop?sort=-createdAt" className="btn-outline">
+                  Nouveautés
                 </Link>
               </div>
             </div>
@@ -111,7 +134,7 @@ export default async function HomePage() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl lg:text-3xl font-serif font-bold">Produits Vedettes</h2>
             <Link
-              href="/products"
+              href="/shop"
               className="text-sm text-primary hover:underline flex items-center gap-1"
             >
               Voir tout
@@ -119,14 +142,25 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="text-center py-12 bg-secondary/20 rounded-soft">
-            <p className="text-muted mb-4">
-              Pas encore de produits. Ajoutez des produits dans le panneau admin.
-            </p>
-            <Link href="/admin" className="btn-primary">
-              Aller à l&apos;Admin
-            </Link>
-          </div>
+          {featuredProducts.length > 0 ? (
+            <Grid className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredProducts.map((product) => (
+                <ProductGridItem key={product.id} product={product} />
+              ))}
+            </Grid>
+          ) : (
+            <div className="text-center py-12 bg-secondary/20 rounded-soft">
+              <p className="text-muted mb-4">
+                La boutique est en cours de préparation. Ajoutez vos produits depuis l&apos;admin,
+                ou lancez{' '}
+                <code className="rounded bg-secondary px-1.5 py-0.5 text-sm">pnpm setup</code> pour
+                charger un catalogue de démonstration.
+              </p>
+              <Link href="/admin" className="btn-primary">
+                Aller à l&apos;Admin
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -232,9 +266,9 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/routines" className="inline-block mt-8">
+              <Link href="/shop" className="inline-block mt-8">
                 <button className="btn-secondary">
-                  Explorer les Routines
+                  Découvrir la boutique
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </button>
               </Link>

@@ -6,13 +6,13 @@ import { Cart } from '@/components/Cart'
 import { OpenCartButton } from '@/components/Cart/OpenCart'
 import Link from 'next/link'
 import React, { Suspense } from 'react'
-import { Search, ShoppingBag, Menu, Heart, User } from 'lucide-react'
+import { Search, Menu, Heart, User } from 'lucide-react'
 
 import { MobileNav } from './MobileNav'
 import type { Header } from 'src/payload-types'
 
 import { LogoIcon } from '@/components/icons/logo'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/utilities/cn'
 import { useAuth } from '@/providers/Auth'
 import { RewardsHeaderWidget } from '@/components/rewards/RewardsHeaderWidget'
@@ -24,16 +24,25 @@ type Props = {
 export function HeaderClient({ header }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const menu = header.navItems || []
   const pathname = usePathname()
+  const router = useRouter()
   const { user } = useAuth()
+
+  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const query = searchQuery.trim()
+    router.push(query ? `/shop?q=${encodeURIComponent(query)}` : '/shop')
+    setSearchOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 dark:bg-background/95 backdrop-blur-sm border-b border-border">
       {/* Announcement Bar */}
       <div className="bg-primary/10 py-2 text-center">
         <p className="text-sm text-primary-800 dark:text-primary-200">
-          Free shipping on orders over <span className="font-medium">$99</span>
+          Livraison offerte dès <span className="font-medium">199 TND</span>
         </p>
       </div>
 
@@ -69,7 +78,7 @@ export function HeaderClient({ header }: Props) {
                       item.link.url && item.link.url !== '/'
                         ? pathname.includes(item.link.url)
                         : false,
-                  }
+                  },
                 )}
                 appearance="inline"
               />
@@ -119,26 +128,26 @@ export function HeaderClient({ header }: Props) {
         <div
           className={cn(
             'overflow-hidden transition-all duration-300',
-            searchOpen ? 'max-h-20 pb-4' : 'max-h-0'
+            searchOpen ? 'max-h-20 pb-4' : 'max-h-0',
           )}
         >
-          <div className="relative">
+          <form className="relative" onSubmit={handleSearch} role="search">
             <input
               type="search"
+              name="q"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
+              aria-label="Search products"
               className="w-full rounded-pill border border-border pl-12 pr-4 py-3 text-sm bg-card focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
-          </div>
+          </form>
         </div>
       </div>
 
       {/* Mobile Navigation */}
-      <MobileNav
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        menu={menu}
-      />
+      <MobileNav isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} menu={menu} />
     </header>
   )
 }

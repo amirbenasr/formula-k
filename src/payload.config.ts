@@ -45,13 +45,22 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Pages, Categories, Brands, Media, RewardTiers, RewardTransactions, RewardsCatalog],
+  collections: [
+    Users,
+    Pages,
+    Categories,
+    Brands,
+    Media,
+    RewardTiers,
+    RewardTransactions,
+    RewardsCatalog,
+  ],
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URL || '',
-      ssl: {
-        rejectUnauthorized: true,
-      },
+      // Managed Postgres (Neon, Supabase, RDS, ...) requires TLS by default.
+      // Local development against docker-compose.yml sets DB_SSL=false.
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: true },
     },
   }),
   editor: lexicalEditor({
