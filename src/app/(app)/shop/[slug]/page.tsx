@@ -1,5 +1,5 @@
 import { Grid } from '@/components/Grid'
-import { ProductGridItem } from '@/components/ProductGridItem'
+import { ProductCard } from '@/components/ProductCard'
 import configPromise from '@payload-config'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -56,9 +56,14 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     select: {
       title: true,
       slug: true,
+      brand: true,
       gallery: true,
       categories: true,
       priceInUSD: true,
+      inventory: true,
+      enableVariants: true,
+      variants: true,
+      createdAt: true,
     },
     ...(sort ? { sort } : { sort: 'title' }),
     where: {
@@ -76,6 +81,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         ...(searchValue
           ? [
               {
+                // `description` is richText (jsonb) and cannot be matched with
+                // `like` on Postgres — search the title and brand instead.
                 or: [
                   {
                     title: {
@@ -83,7 +90,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                     },
                   },
                   {
-                    description: {
+                    'brand.title': {
                       like: searchValue,
                     },
                   },
@@ -125,9 +132,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       )}
 
       {products?.docs.length > 0 ? (
-        <Grid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Grid className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {products.docs.map((product) => {
-            return <ProductGridItem key={product.id} product={product} />
+            return <ProductCard key={product.id} product={product} imageSizes="(min-width: 1024px) 23vw, 45vw" />
           })}
         </Grid>
       ) : null}

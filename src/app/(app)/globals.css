@@ -211,7 +211,7 @@
   --secondary: #f2a7b0;
   --secondary-foreground: #1a1a1a;
 
-  --muted: #525252;
+  --muted: #8a8a8a;
   --muted-foreground: #a3a3a3;
 
   --accent: #6cbfb5;
@@ -226,7 +226,7 @@
 
   --success: hsl(196 100% 14%);
   --warning: hsl(34 51% 25%);
-  --error: hsl(10 39% 43%);
+  --error: hsl(10 75% 62%);
 }
 
 /* Cool Palette (Blue/Lavender) - Light Mode */
@@ -279,7 +279,7 @@
   --secondary: #2a3a4a;
   --secondary-foreground: #e8f0f8;
 
-  --muted: #4a5a6a;
+  --muted: #8ea3b8;
   --muted-foreground: #9aaaba;
 
   --accent: #a8b8e8;
@@ -294,7 +294,7 @@
 
   --success: hsl(196 100% 14%);
   --warning: hsl(34 51% 25%);
-  --error: hsl(10 39% 43%);
+  --error: hsl(10 75% 62%);
 }
 
 @theme inline {

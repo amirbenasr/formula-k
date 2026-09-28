@@ -1,5 +1,6 @@
 import { Grid } from '@/components/Grid'
-import { ProductGridItem } from '@/components/ProductGridItem'
+import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
+import { searchProductCatalog } from '@/utilities/storefront'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import React from 'react'
@@ -26,9 +27,14 @@ export default async function ShopPage({ searchParams }: Props) {
     select: {
       title: true,
       slug: true,
+      brand: true,
       gallery: true,
       categories: true,
       priceInUSD: true,
+      inventory: true,
+      enableVariants: true,
+      variants: true,
+      createdAt: true,
     },
     ...(sort ? { sort } : { sort: 'title' }),
     ...(searchValue || category
@@ -43,6 +49,8 @@ export default async function ShopPage({ searchParams }: Props) {
               ...(searchValue
                 ? [
                     {
+                      // `description` is richText (jsonb): `like` on it is invalid
+                      // SQL on Postgres and made every search fail silently.
                       or: [
                         {
                           title: {
@@ -50,7 +58,7 @@ export default async function ShopPage({ searchParams }: Props) {
                           },
                         },
                         {
-                          description: {
+                          'brand.title': {
                             like: searchValue,
                           },
                         },
@@ -73,27 +81,57 @@ export default async function ShopPage({ searchParams }: Props) {
       : {}),
   })
 
-  const resultsText = products.docs.length > 1 ? 'results' : 'result'
+  // `like` in Postgres is accent-sensitive, so "creme" never matched "Crème".
+  // Fall back to the normalised catalogue search when the SQL query finds nothing.
+  let docs = products.docs as ProductCardProduct[]
+
+  const searchQuery = Array.isArray(searchValue) ? searchValue[0] : searchValue
+
+  if (searchQuery && docs.length === 0) {
+    const fallback = await searchProductCatalog(payload, searchQuery, 60)
+    const sortBy = Array.isArray(sort) ? sort[0] : sort
+
+    if (sortBy) {
+      const direction = sortBy.startsWith('-') ? -1 : 1
+      const field = sortBy.replace(/^-/, '')
+
+      fallback.sort((a, b) => {
+        if (field === 'priceInUSD') return ((a.priceInUSD ?? 0) - (b.priceInUSD ?? 0)) * direction
+        if (field === 'createdAt') {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return (aTime - bTime) * direction
+        }
+        return a.title.localeCompare(b.title, 'fr') * direction
+      })
+    }
+
+    docs = fallback
+  }
+
+  const resultsText = docs.length > 1 ? 'resultats' : 'resultat'
 
   return (
     <div>
       {searchValue ? (
-        <p className="mb-4">
-          {products.docs?.length === 0
-            ? 'There are no products that match '
-            : `Showing ${products.docs.length} ${resultsText} for `}
-          <span className="font-bold">&quot;{searchValue}&quot;</span>
+        <p className="mb-4 text-sm text-muted">
+          {docs.length === 0
+            ? 'Aucun produit ne correspond à '
+            : `${docs.length} ${resultsText} pour `}
+          <span className="font-semibold text-foreground">&quot;{searchValue}&quot;</span>
         </p>
       ) : null}
 
-      {!searchValue && products.docs?.length === 0 && (
-        <p className="mb-4">No products found. Please try different filters.</p>
+      {!searchValue && docs.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border bg-card/60 p-10 text-center">
+          <p className="text-muted">Aucun produit disponible pour le moment.</p>
+        </div>
       )}
 
-      {products?.docs.length > 0 ? (
-        <Grid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.docs.map((product) => {
-            return <ProductGridItem key={product.id} product={product} />
+      {docs.length > 0 ? (
+        <Grid className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {docs.map((product) => {
+            return <ProductCard key={product.id} product={product} imageSizes="(min-width: 1024px) 23vw, 45vw" />
           })}
         </Grid>
       ) : null}

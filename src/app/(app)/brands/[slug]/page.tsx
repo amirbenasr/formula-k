@@ -1,6 +1,6 @@
 import { Grid } from '@/components/Grid'
 import { Media } from '@/components/Media'
-import { ProductGridItem } from '@/components/ProductGridItem'
+import { ProductCard } from '@/components/ProductCard'
 import type { Media as MediaType } from '@/payload-types'
 import configPromise from '@payload-config'
 import type { Metadata } from 'next'
@@ -59,8 +59,13 @@ export default async function BrandPage({ params }: Props) {
     select: {
       title: true,
       slug: true,
+      brand: true,
       gallery: true,
       priceInUSD: true,
+      inventory: true,
+      enableVariants: true,
+      variants: true,
+      createdAt: true,
     },
     sort: 'title',
     limit: 100,
@@ -97,9 +102,9 @@ export default async function BrandPage({ params }: Props) {
         </div>
 
         {products.length > 0 ? (
-          <Grid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <Grid className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {products.map((product) => (
-              <ProductGridItem key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} imageSizes="(min-width: 1024px) 23vw, 45vw" />
             ))}
           </Grid>
         ) : (

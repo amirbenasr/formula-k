@@ -27,22 +27,22 @@ export async function Footer() {
         <div className="container py-12">
           <div className="max-w-xl mx-auto text-center">
             <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
-              Join Our Newsletter
+              Rejoignez le club Formula K
             </h3>
             <p className="text-muted mb-6">
-              Subscribe to get special offers, free giveaways, and new arrivals.
+              Nouveautés, offres exclusives et conseils routine — une fois par semaine, jamais de spam.
             </p>
             <form className="flex flex-col sm:flex-row gap-3">
               <input
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Votre adresse e-mail"
                 className="flex-1 rounded-pill border border-border px-6 py-3 text-sm bg-card focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 type="submit"
                 className="btn-primary whitespace-nowrap"
               >
-                Subscribe
+                Je m’inscris
               </button>
             </form>
           </div>
@@ -55,7 +55,7 @@ export async function Footer() {
           {/* CMS-managed navigation */}
           <div className="col-span-2 md:col-span-2">
             <h4 className="font-serif font-semibold text-foreground mb-4">
-              Quick Links
+              Liens rapides
             </h4>
             <Suspense
               fallback={
@@ -73,7 +73,7 @@ export async function Footer() {
           {/* Help */}
           <div>
             <h4 className="font-serif font-semibold text-foreground mb-4">
-              Help
+              Aide
             </h4>
             <ul className="space-y-3">
               <li>
@@ -81,7 +81,7 @@ export async function Footer() {
                   href="/contact"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Contact Us
+                  Nous contacter
                 </Link>
               </li>
               <li>
@@ -97,7 +97,7 @@ export async function Footer() {
                   href="/shipping"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Shipping Info
+                  Livraison & délais
                 </Link>
               </li>
               <li>
@@ -105,7 +105,7 @@ export async function Footer() {
                   href="/returns"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Returns
+                  Retours & échanges
                 </Link>
               </li>
             </ul>
@@ -114,7 +114,7 @@ export async function Footer() {
           {/* About */}
           <div>
             <h4 className="font-serif font-semibold text-foreground mb-4">
-              About
+              À propos
             </h4>
             <ul className="space-y-3">
               <li>
@@ -122,7 +122,7 @@ export async function Footer() {
                   href="/about"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Our Story
+                  Notre histoire
                 </Link>
               </li>
               <li>
@@ -130,7 +130,7 @@ export async function Footer() {
                   href="/privacy"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Privacy Policy
+                  Confidentialité
                 </Link>
               </li>
               <li>
@@ -138,7 +138,7 @@ export async function Footer() {
                   href="/terms"
                   className="text-sm text-muted hover:text-primary transition-colors"
                 >
-                  Terms of Service
+                  Conditions générales
                 </Link>
               </li>
             </ul>
@@ -201,7 +201,7 @@ export async function Footer() {
 
             {/* Copyright */}
             <p className="text-sm text-muted">
-              &copy; {copyrightDate} {copyrightName}. All rights reserved.
+              &copy; {copyrightDate} {copyrightName}. Tous droits réservés.
             </p>
           </div>
         </div>

@@ -12,11 +12,14 @@ type Props = {
   product: Product
 }
 
+/** Stable empty array so the fallback below keeps a constant identity. */
+const NO_VARIANTS: (number | Variant)[] = []
+
 export function AddToCart({ product }: Props) {
   const { addItem, cart, isLoading } = useCart()
   const searchParams = useSearchParams()
 
-  const variants = product.variants?.docs || []
+  const variants = product.variants?.docs || NO_VARIANTS
 
   const selectedVariant = useMemo<Variant | undefined>(() => {
     if (product.enableVariants && variants.length) {
@@ -45,7 +48,7 @@ export function AddToCart({ product }: Props) {
         product: product.id,
         variant: selectedVariant?.id ?? undefined,
       }).then(() => {
-        toast.success('Item added to cart.')
+        toast.success('Ajouté au panier', { description: product.title })
       })
     },
     [addItem, product, selectedVariant],
@@ -105,7 +108,7 @@ export function AddToCart({ product }: Props) {
       onClick={addToCart}
       type="submit"
     >
-      Add To Cart
+      Ajouter au panier
     </Button>
   )
 }

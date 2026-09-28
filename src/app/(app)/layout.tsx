@@ -51,7 +51,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <InitTheme />
         <InitPalette palette={palette} />
         <link href="/favicon.ico" rel="icon" sizes="32x32" />
-        <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
       </head>
       <body className="flex flex-col min-h-screen">
         <Providers palette={palette}>

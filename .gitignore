@@ -48,3 +48,5 @@ next-env.d.ts
 
 public/media
 
+# Local scratch space (seed image cache, verification artifacts)
+.tmp/

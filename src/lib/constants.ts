@@ -7,7 +7,7 @@ export type SortFilterItem = {
 export const defaultSort: SortFilterItem = {
   slug: null,
   reverse: false,
-  title: 'Alphabetic A-Z',
+  title: 'Alphabétique A-Z',
 }
 
 export const sorting: SortFilterItem[] = [
