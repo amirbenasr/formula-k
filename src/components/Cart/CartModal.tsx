@@ -33,6 +33,13 @@ export function CartModal() {
     setIsOpen(false)
   }, [pathname])
 
+  useEffect(() => {
+    // Quick-add buttons dispatch this event so the drawer opens on add.
+    const openCart = () => setIsOpen(true)
+    window.addEventListener('fk:open-cart', openCart)
+    return () => window.removeEventListener('fk:open-cart', openCart)
+  }, [])
+
   const totalQuantity = useMemo(() => {
     if (!cart || !cart.items || !cart.items.length) return undefined
     return cart.items.reduce((quantity, item) => (item.quantity || 0) + quantity, 0)
@@ -46,15 +53,15 @@ export function CartModal() {
 
       <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>My Cart</SheetTitle>
+          <SheetTitle>Mon panier</SheetTitle>
 
-          <SheetDescription>Manage your cart here, add items to view the total.</SheetDescription>
+          <SheetDescription>Vérifiez vos articles puis passez commande — paiement à la livraison.</SheetDescription>
         </SheetHeader>
 
         {!cart || cart?.items?.length === 0 ? (
           <div className="text-center flex flex-col items-center gap-2">
             <ShoppingCart className="h-16" />
-            <p className="text-center text-2xl font-bold">Your cart is empty.</p>
+            <p className="text-center text-2xl font-bold">Votre panier est vide.</p>
           </div>
         ) : (
           <div className="grow flex px-4">
@@ -176,7 +183,7 @@ export function CartModal() {
 
                   <Button asChild>
                     <Link className="w-full" href="/checkout">
-                      Proceed to Checkout
+                      Passer la commande
                     </Link>
                   </Button>
                 </div>

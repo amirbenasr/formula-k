@@ -27,7 +27,7 @@ export const Image: React.FC<MediaProps> = (props) => {
     width: widthFromProps,
   } = props
 
-  const [isLoading, setIsLoading] = React.useState(true)
+  const [, setIsLoading] = React.useState(true)
 
   let width: number | undefined | null
   let height: number | undefined | null
@@ -37,7 +37,6 @@ export const Image: React.FC<MediaProps> = (props) => {
   if (!src && resource && typeof resource === 'object') {
     const {
       alt: altFromResource,
-      filename: fullFilename,
       height: fullHeight,
       url,
       width: fullWidth,
@@ -47,14 +46,14 @@ export const Image: React.FC<MediaProps> = (props) => {
     height = heightFromProps ?? fullHeight
     alt = altFromResource
 
-    const filename = fullFilename
-
-    // Handle both relative URLs (local) and absolute URLs (R2/S3)
+    // Absolute URLs come from remote storage (S3/R2). Relative URLs are local
+    // media served from this same app, so they must stay same-origin — prefixing
+    // NEXT_PUBLIC_SERVER_URL breaks them whenever the app runs on another
+    // host/port (previews, local dev on a non-default port).
     if (url?.startsWith('http')) {
       src = url
     } else {
-      const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
-      src = `${serverUrl}${url}`
+      src = url || ''
     }
   }
 

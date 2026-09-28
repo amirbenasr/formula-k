@@ -1,304 +1,80 @@
-import { Grid } from '@/components/Grid'
-import { ProductGridItem } from '@/components/ProductGridItem'
+import { BestSellers } from '@/components/home/BestSellers'
+import { BrandStrip } from '@/components/home/BrandStrip'
+import { CategoryCircles } from '@/components/home/CategoryCircles'
+import { CtaBand } from '@/components/home/CtaBand'
+import { Hero } from '@/components/home/Hero'
+import { NewArrivals } from '@/components/home/NewArrivals'
+import { TrustBar } from '@/components/home/TrustBar'
+import { TrustSection } from '@/components/home/TrustSection'
 import { VideoShowcase } from '@/components/VideoShowcase'
 import config from '@payload-config'
-import { ArrowRight, Droplets, Heart, Sparkles, Sun } from 'lucide-react'
-import Image from 'next/image'
-import Link from 'next/link'
 import { getPayload } from 'payload'
 
+import { getBestSellers, getCategoryShowcase, getFreshProducts } from '@/utilities/storefront'
+
 export const metadata = {
-  title: 'SouGlowy | K-Beauty Tunisia',
+  title: 'Formula K | K-Beauty en Tunisie — livraison 24-48h, paiement à la livraison',
   description:
-    'Discover the secret to Glass Skin. The best K-Beauty products selected to reveal your natural glow.',
+    'Sérums, crèmes, masques et solaires des meilleures marques coréennes, livrés partout en Tunisie en 24–48h. Paiement à la livraison, produits 100% authentiques.',
 }
 
 export default async function HomePage() {
   const payload = await getPayload({ config })
 
-  const { docs: brands } = await payload.find({
-    collection: 'brands',
-    limit: 10,
-  })
+  // One round of queries, run in parallel: the storefront must feel instant.
+  const [freshProducts, bestSellers, categoryShowcase, brandsResult, videoProductsResult] =
+    await Promise.all([
+      getFreshProducts(payload, 12),
+      getBestSellers(payload, 8),
+      getCategoryShowcase(payload, 8),
+      payload.find({
+        collection: 'brands',
+        overrideAccess: false,
+        depth: 1,
+        limit: 12,
+        sort: 'title',
+      }),
+      payload.find({
+        collection: 'products',
+        draft: false,
+        overrideAccess: false,
+        depth: 2,
+        limit: 12,
+        where: {
+          and: [{ _status: { equals: 'published' } }, { featuredInVideoShowcase: { equals: true } }],
+        },
+      }),
+    ])
 
-  // Newest in-stock products, so the storefront is never empty on first load.
-  const { docs: featuredProducts } = await payload.find({
-    collection: 'products',
-    where: {
-      _status: {
-        equals: 'published',
-      },
-    },
-    sort: '-createdAt',
-    limit: 8,
-    depth: 1,
-    overrideAccess: false,
-    select: {
-      title: true,
-      slug: true,
-      gallery: true,
-      priceInUSD: true,
-    },
-  })
-
-  // Fetch products featured in video showcase
-  const { docs: allVideoShowcaseProducts } = await payload.find({
-    collection: 'products',
-    where: {
-      featuredInVideoShowcase: {
-        equals: true,
-      },
-    },
-    limit: 20,
-    depth: 2,
-    overrideAccess: false,
-  })
-
-  // Filter to only include products that have videos
-  const videoShowcaseProducts = allVideoShowcaseProducts.filter(
+  const videoShowcaseProducts = videoProductsResult.docs.filter(
     (product) => product.videos && product.videos.length > 0,
   )
 
+  // When there is no sales history yet, showcase the newest buyable products
+  // instead of inventing a ranking.
+  const hasSalesData = bestSellers.length > 0
+  const showcaseProducts = hasSalesData ? bestSellers : freshProducts.slice(0, 8)
+
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-secondary/50 to-background overflow-hidden">
-        <div className="container py-16 lg:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <span className="badge-new mb-4">K-Beauty Tunisia</span>
-              <h1 className="text-4xl lg:text-6xl font-serif font-bold text-foreground mb-6 leading-tight">
-                Découvrez le Secret de la Glass Skin
-              </h1>
-              <p className="text-lg text-muted mb-8 max-w-lg mx-auto lg:mx-0">
-                Les meilleurs produits K-Beauty sélectionnés pour révéler votre éclat naturel
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/shop" className="btn-primary">
-                  Découvrir
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-                <Link href="/shop?sort=-createdAt" className="btn-outline">
-                  Nouveautés
-                </Link>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="relative aspect-[4/5] max-w-md mx-auto lg:max-w-lg">
-                <div className="absolute inset-0 bg-primary/20 rounded-[2rem] blur-3xl" />
-                <Image
-                  src="https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=600&h=750&fit=crop"
-                  alt="K-Beauty Products"
-                  fill
-                  className="object-cover rounded-[2rem] relative z-10"
-                  priority
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      <Hero products={freshProducts} />
+      <TrustBar />
 
-        {/* Decorative Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-accent/20 rounded-full blur-2xl" />
-        <div className="absolute bottom-20 right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
-      </section>
+      <BestSellers products={showcaseProducts} ranked={hasSalesData} />
 
-      {/* Features */}
-      <section className="py-12 border-b border-border">
-        <div className="container">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { icon: Sparkles, title: 'Glass Skin', desc: 'Eclat radieux' },
-              { icon: Droplets, title: 'Hydratation', desc: 'Couches de moisture' },
-              { icon: Sun, title: 'Protection', desc: 'Essentiels SPF' },
-              { icon: Heart, title: 'Soin Doux', desc: 'Peaux sensibles' },
-            ].map((feature, i) => (
-              <div key={i} className="text-center p-4">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-3">
-                  <feature.icon className="h-6 w-6" />
-                </div>
-                <h3 className="font-serif font-semibold mb-1">{feature.title}</h3>
-                <p className="text-sm text-muted">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <CategoryCircles categories={categoryShowcase} />
 
-      {/* Video Showcase Section */}
-      {videoShowcaseProducts.length > 0 && <VideoShowcase products={videoShowcaseProducts} />}
+      {videoShowcaseProducts.length > 0 ? (
+        <VideoShowcase products={videoShowcaseProducts} />
+      ) : null}
 
-      {/* Featured Products Placeholder */}
-      <section className="py-16">
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl lg:text-3xl font-serif font-bold">Produits Vedettes</h2>
-            <Link
-              href="/shop"
-              className="text-sm text-primary hover:underline flex items-center gap-1"
-            >
-              Voir tout
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+      <NewArrivals products={freshProducts} />
 
-          {featuredProducts.length > 0 ? (
-            <Grid className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((product) => (
-                <ProductGridItem key={product.id} product={product} />
-              ))}
-            </Grid>
-          ) : (
-            <div className="text-center py-12 bg-secondary/20 rounded-soft">
-              <p className="text-muted mb-4">
-                La boutique est en cours de préparation. Ajoutez vos produits depuis l&apos;admin,
-                ou lancez{' '}
-                <code className="rounded bg-secondary px-1.5 py-0.5 text-sm">pnpm setup</code> pour
-                charger un catalogue de démonstration.
-              </p>
-              <Link href="/admin" className="btn-primary">
-                Aller à l&apos;Admin
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
+      <BrandStrip brands={brandsResult.docs} />
 
-      {/* Shop by Category */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container">
-          <h2 className="text-2xl lg:text-3xl font-serif font-bold text-center mb-10">
-            Acheter par Catégorie
-          </h2>
+      <TrustSection />
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              {
-                name: 'Nettoyants',
-                slug: 'nettoyants',
-                image:
-                  'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=200&h=200&fit=crop',
-              },
-              {
-                name: 'Toniques',
-                slug: 'toniques',
-                image:
-                  'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=200&h=200&fit=crop',
-              },
-              {
-                name: 'Sérums',
-                slug: 'serums',
-                image:
-                  'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=200&h=200&fit=crop',
-              },
-              {
-                name: 'Crèmes',
-                slug: 'cremes',
-                image:
-                  'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=200&h=200&fit=crop',
-              },
-              {
-                name: 'Masques',
-                slug: 'masques',
-                image:
-                  'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=200&h=200&fit=crop',
-              },
-              {
-                name: 'Solaires',
-                slug: 'solaires',
-                image:
-                  'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=200&h=200&fit=crop',
-              },
-            ].map((category) => (
-              <Link
-                key={category.name}
-                href={`/shop/${category.slug}`}
-                className="group text-center"
-              >
-                <div className="relative aspect-square rounded-full overflow-hidden mb-3 mx-auto w-24 lg:w-32 border-2 border-transparent group-hover:border-primary transition-colors">
-                  <Image
-                    src={category.image}
-                    alt={category.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                  {category.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why K-Beauty */}
-      <section className="py-16">
-        <div className="container">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative aspect-[4/3] rounded-soft overflow-hidden">
-              <Image
-                src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=800&h=600&fit=crop"
-                alt="K-Beauty Routine"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div>
-              <h2 className="text-2xl lg:text-3xl font-serif font-bold mb-6">Pourquoi K-Beauty?</h2>
-              <p className="text-muted mb-6 leading-relaxed">
-                La K-Beauty est reconnue mondialement pour ses formules innovantes et ses
-                ingrédients de haute qualité. Découvrez une approche holistique des soins de la peau
-                qui met l&apos;accent sur la prévention et l&apos;hydratation.
-              </p>
-              <ul className="space-y-4">
-                {[
-                  'Ingrédients innovants soutenus par la science',
-                  'Routines multi-étapes pour des résultats maximaux',
-                  'Formules douces pour tous les types de peau',
-                  'Focus sur la prévention, pas seulement le traitement',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-sm font-medium">
-                      {i + 1}
-                    </span>
-                    <span className="text-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/shop" className="inline-block mt-8">
-                <button className="btn-secondary">
-                  Découvrir la boutique
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Brands */}
-      {brands.length > 0 && (
-        <section className="py-16 bg-card border-t border-border">
-          <div className="container">
-            <h2 className="text-2xl lg:text-3xl font-serif font-bold text-center mb-10">
-              Nos Marques
-            </h2>
-
-            <div className="flex flex-wrap justify-center items-center gap-8 lg:gap-16">
-              {brands.map((brand) => (
-                <Link
-                  key={brand.id}
-                  href={`/brands/${brand.slug}`}
-                  className="text-xl lg:text-2xl font-serif font-medium text-muted hover:text-primary transition-colors"
-                >
-                  {brand.title}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <CtaBand />
     </div>
   )
 }

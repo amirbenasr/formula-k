@@ -16,7 +16,7 @@ import { Page, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
-  return doc?.title ? `${doc.title} | Payload Ecommerce Template` : 'Payload Ecommerce Template'
+  return doc?.title ? `${doc.title} | Formula K` : 'Formula K — K-Beauty en Tunisie'
 }
 
 const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
@@ -25,29 +25,55 @@ const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
   return doc?.slug ? `${url}/${doc.slug}` : url
 }
 
-// Only enable S3/R2 storage if all required env vars are present
-const s3StoragePlugin: Plugin[] =
-  process.env.R2_BUCKET &&
-  process.env.R2_ENDPOINT &&
-  process.env.R2_ACCESS_KEY_ID &&
-  process.env.R2_SECRET_ACCESS_KEY
-    ? [
-        s3Storage({
-          collections: {
-            media: true,
+/**
+ * Placeholder values shipped in `.env.example` (e.g. "your-bucket-name",
+ * "https://<account-id>.r2.cloudflarestorage.com") are truthy strings, so a naive
+ * presence check would enable remote storage locally. That made every uploaded
+ * file unreadable: media URLs returned by the API pointed at a fake S3 endpoint
+ * and each image request failed with ERR_INVALID_URL.
+ */
+function hasValidR2Config() {
+  const { R2_BUCKET, R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env
+
+  const values = [R2_BUCKET, R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY]
+
+  if (values.some((value) => !value)) return false
+
+  const looksLikePlaceholder = values.some((value) =>
+    /your-|<[^>]+>|example\.com|changeme/i.test(value as string),
+  )
+
+  if (looksLikePlaceholder) return false
+
+  try {
+    new URL(R2_ENDPOINT as string)
+  } catch {
+    return false
+  }
+
+  return true
+}
+
+// Only enable S3/R2 storage when real credentials are configured;
+// otherwise media is stored on local disk.
+const s3StoragePlugin: Plugin[] = hasValidR2Config()
+  ? [
+      s3Storage({
+        collections: {
+          media: true,
+        },
+        bucket: process.env.R2_BUCKET as string,
+        config: {
+          endpoint: process.env.R2_ENDPOINT as string,
+          credentials: {
+            accessKeyId: process.env.R2_ACCESS_KEY_ID as string,
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY as string,
           },
-          bucket: process.env.R2_BUCKET,
-          config: {
-            endpoint: process.env.R2_ENDPOINT,
-            credentials: {
-              accessKeyId: process.env.R2_ACCESS_KEY_ID,
-              secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-            },
-            region: 'auto',
-          },
-        }),
-      ]
-    : []
+          region: 'auto',
+        },
+      }),
+    ]
+  : []
 
 export const plugins: Plugin[] = [
   ...s3StoragePlugin,
