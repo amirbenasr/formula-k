@@ -199,7 +199,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
           </div>
           <Link
             href="/shop"
-            className="text-sm text-primary hover:underline flex items-center gap-1"
+            className="text-sm text-primary-ink hover:underline flex items-center gap-1"
           >
             Voir tous les produits
           </Link>
@@ -351,7 +351,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
                       {/* Product Text */}
                       <div className="flex-1 min-w-0">
                         <Link href={`/products/${item.product.slug}`}>
-                          <h3 className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary transition-colors">
+                          <h3 className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary-ink transition-colors">
                             {item.product.title}
                           </h3>
                         </Link>
@@ -363,7 +363,7 @@ export function VideoShowcase({ products }: VideoShowcaseProps) {
 
                     {/* Add to Cart - Only on active */}
                     {isActive && (
-                      <button className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-full border border-primary/30 text-primary hover:bg-primary hover:text-white transition-colors">
+                      <button className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-full border border-primary/30 text-primary-ink hover:bg-primary hover:text-white transition-colors">
                         <ShoppingBag className="w-3.5 h-3.5" />
                         Ajouter au panier
                       </button>

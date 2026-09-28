@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
 
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import React, { Suspense } from 'react'
-
 import { VerifyEmailForm } from '@/components/forms/VerifyEmailForm'
+import React, { Suspense } from 'react'
 
 function VerifyEmailContent() {
   return <VerifyEmailForm />
@@ -11,19 +9,17 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="container py-16">
-      <Suspense fallback={<div>Verifying your email...</div>}>
-        <VerifyEmailContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={null}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Verify your email address.',
-  openGraph: mergeOpenGraph({
-    title: 'Verify Email',
+  description: 'Vérification de votre adresse e-mail Formula K.',
+  openGraph: {
+    title: 'Vérification de l’e-mail',
     url: '/verify-email',
-  }),
-  title: 'Verify Email',
+  },
+  title: 'Vérification de l’e-mail',
 }

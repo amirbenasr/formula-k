@@ -6,10 +6,8 @@ import { generateMeta } from '@/utilities/generateMeta'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
-import { homeStaticData } from '@/endpoints/seed/home-static'
 import React from 'react'
 
-import type { Page } from '@/payload-types'
 import { notFound } from 'next/navigation'
 
 export async function generateStaticParams() {
@@ -43,18 +41,16 @@ type Args = {
 }
 
 export default async function Page({ params }: Args) {
-  const { slug = 'home' } = await params
-  const url = '/' + slug
+  const { slug } = await params
 
-  let page = await queryPageBySlug({
-    slug,
+  const page = await queryPageBySlug({
+    slug: slug || '',
   })
 
-  // Remove this code once your website is seeded
-  if (!page && slug === 'home') {
-    page = homeStaticData() as Page
-  }
-
+  // NOTE: this template used to fall back to `homeStaticData()` for slug
+  // "home", which served the whole seeded Payload demo page (English copy,
+  // "Payload Ecommerce Template" heading) at /home on a live storefront.
+  // The storefront homepage is `src/app/(app)/page.tsx`; /home is not a page.
   if (!page) {
     return notFound()
   }
@@ -70,7 +66,7 @@ export default async function Page({ params }: Args) {
 }
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
-  const { slug = 'home' } = await params
+  const { slug = '' } = await params
 
   const page = await queryPageBySlug({
     slug,

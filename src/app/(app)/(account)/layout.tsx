@@ -12,15 +12,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const { user } = await payload.auth({ headers })
 
   return (
-    <div>
-      <div className="container">
-        <RenderParams className="" />
-      </div>
+    <div className="container py-8 lg:py-12">
+      <RenderParams />
 
-      <div className="container mt-16 pb-8 flex gap-8">
-        {user && <AccountNav className="max-w-62 grow flex-col items-start gap-4 hidden md:flex" />}
+      <div className="flex flex-col gap-6 md:flex-row md:gap-10">
+        {user ? (
+          <AccountNav className="md:sticky md:top-24 md:w-56 md:shrink-0 md:self-start" />
+        ) : null}
 
-        <div className="flex flex-col gap-12 grow">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col gap-8">{children}</div>
       </div>
     </div>
   )

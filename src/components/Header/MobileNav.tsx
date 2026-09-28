@@ -81,7 +81,7 @@ export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavP
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-4">
-          <span className="font-serif text-xl font-bold text-primary">Formula K</span>
+          <span className="font-serif text-xl font-bold text-primary-ink">Formula K</span>
           <button
             onClick={onClose}
             className="cursor-pointer p-2 text-muted transition-colors hover:text-foreground"
@@ -102,7 +102,7 @@ export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavP
             className="flex items-center gap-3 px-6 py-3 text-foreground transition-colors hover:bg-secondary/50"
             onClick={onClose}
           >
-            <LayoutGrid className="h-5 w-5 text-primary" />
+            <LayoutGrid className="h-5 w-5 text-primary-ink" />
             <span className="font-medium">Tous les produits</span>
           </Link>
 

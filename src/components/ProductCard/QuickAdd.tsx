@@ -1,7 +1,7 @@
 'use client'
 
 import { useCart } from '@payloadcms/plugin-ecommerce/client/react'
-import { Check, Loader2, Plus } from 'lucide-react'
+import { Check, Loader2, Plus, X } from 'lucide-react'
 import React, { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -45,7 +45,9 @@ export function QuickAdd({ productId, title, requiresVariant, soldOut, className
         window.dispatchEvent(new CustomEvent('fk:open-cart'))
         window.setTimeout(() => setJustAdded(false), 2500)
       } catch {
-        toast.error("Impossible d'ajouter ce produit", { description: 'Réessayez dans un instant.' })
+        toast.error("Impossible d'ajouter ce produit", {
+          description: 'Réessayez dans un instant.',
+        })
       } finally {
         setPending(false)
       }
@@ -67,17 +69,19 @@ export function QuickAdd({ productId, title, requiresVariant, soldOut, className
       aria-label={soldOut ? `${title} — rupture de stock` : `Ajouter ${title} au panier`}
       title={label}
       className={cn(
-        'inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all duration-200',
+        'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-all duration-200',
         'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40',
         soldOut
-          ? 'cursor-not-allowed border-border bg-secondary/40 text-muted'
+          ? 'cursor-not-allowed border-border bg-secondary/70 text-muted'
           : justAdded
             ? 'border-success bg-success/20 text-foreground'
-            : 'border-primary/25 bg-primary/10 text-primary hover:border-primary hover:bg-primary hover:text-white active:scale-95',
+            : 'border-transparent bg-primary text-primary-foreground shadow-soft hover:bg-primary/90 active:scale-95',
         className,
       )}
     >
-      {pending ? (
+      {soldOut ? (
+        <X className="h-4 w-4" />
+      ) : pending ? (
         <Loader2 className="h-4 w-4 animate-spin" />
       ) : justAdded ? (
         <Check className="h-4 w-4" />

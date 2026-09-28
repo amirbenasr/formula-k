@@ -15,7 +15,7 @@ export function OpenCartButton({
       type="button"
       aria-label={quantity ? `Panier — ${quantity} article(s)` : 'Panier'}
       className={cn(
-        'relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:text-primary',
+        'relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:text-primary-ink',
         className,
       )}
       {...rest}

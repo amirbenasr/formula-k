@@ -1,15 +1,17 @@
 import type { Metadata } from 'next'
 
 import { Button } from '@/components/ui/button'
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import Link from 'next/link'
-import { headers as getHeaders } from 'next/headers.js'
-import configPromise from '@payload-config'
 import { AccountForm } from '@/components/forms/AccountForm'
-import { Order } from '@/payload-types'
 import { OrderItem } from '@/components/OrderItem'
-import { getPayload } from 'payload'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
+import configPromise from '@payload-config'
+import { headers as getHeaders } from 'next/headers.js'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
+import React from 'react'
+
+import type { Order } from '@/payload-types'
 
 export default async function AccountPage() {
   const headers = await getHeaders()
@@ -19,9 +21,7 @@ export default async function AccountPage() {
   let orders: Order[] | null = null
 
   if (!user) {
-    redirect(
-      `/login?warning=${encodeURIComponent('Please login to access your account settings.')}`,
-    )
+    redirect(`/login?warning=${encodeURIComponent('Connectez-vous pour accéder à votre compte.')}`)
   }
 
   try {
@@ -39,57 +39,59 @@ export default async function AccountPage() {
     })
 
     orders = ordersResult?.docs || []
-  } catch (error) {
-    // when deploying this template on Payload Cloud, this page needs to build before the APIs are live
-    // so swallow the error here and simply render the page with fallback data where necessary
-    // in production you may want to redirect to a 404  page or at least log the error somewhere
-    // console.error(error)
+  } catch {
+    // Building before the API/database is reachable must not break the page.
   }
+
+  const hasOrders = Boolean(orders && orders.length > 0)
 
   return (
     <>
-      <div className="border p-8 rounded-lg bg-primary-foreground">
-        <h1 className="text-3xl font-medium mb-8">Account settings</h1>
+      <section className="surface surface-pad">
+        <h1 className="mb-6 font-serif text-2xl font-medium text-foreground sm:text-3xl">
+          Mes informations
+        </h1>
         <AccountForm />
-      </div>
+      </section>
 
-      <div className=" border p-8 rounded-lg bg-primary-foreground">
-        <h2 className="text-3xl font-medium mb-8">Recent Orders</h2>
-
-        <div className="prose dark:prose-invert mb-8">
-          <p>
-            These are the most recent orders you have placed. Each order is associated with an
-            payment. As you place more orders, they will appear in your orders list.
-          </p>
+      <section className="surface surface-pad">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl font-medium text-foreground">
+            Mes dernières commandes
+          </h2>
+          <Button asChild className="w-full sm:w-auto" size="sm" variant="outline">
+            <Link href="/orders">Toutes mes commandes</Link>
+          </Button>
         </div>
 
-        {(!orders || !Array.isArray(orders) || orders?.length === 0) && (
-          <p className="mb-8">You have no orders.</p>
-        )}
-
-        {orders && orders.length > 0 && (
-          <ul className="flex flex-col gap-6 mb-8">
-            {orders?.map((order, index) => (
-              <li key={order.id}>
+        {!hasOrders ? (
+          <div className="flex flex-col items-start gap-4">
+            <p className="text-sm text-muted">
+              Vous n’avez pas encore passé de commande. Vos futures commandes apparaîtront ici.
+            </p>
+            <Button asChild className="w-full sm:w-auto">
+              <Link href="/shop">Découvrir la boutique</Link>
+            </Button>
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-4">
+            {orders?.map((order) => (
+              <li className="rounded-xl border border-border p-4" key={order.id}>
                 <OrderItem order={order} />
               </li>
             ))}
           </ul>
         )}
-
-        <Button asChild variant="default">
-          <Link href="/orders">View all orders</Link>
-        </Button>
-      </div>
+      </section>
     </>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Create an account or log in to your existing account.',
+  description: 'Gérez vos informations, vos adresses et vos commandes Formula K.',
   openGraph: mergeOpenGraph({
-    title: 'Account',
+    title: 'Mon compte',
     url: '/account',
   }),
-  title: 'Account',
+  title: 'Mon compte',
 }

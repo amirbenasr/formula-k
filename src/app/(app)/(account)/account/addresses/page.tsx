@@ -1,69 +1,42 @@
 import type { Metadata } from 'next'
 
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import { headers as getHeaders } from 'next/headers.js'
-import configPromise from '@payload-config'
-import { Order } from '@/payload-types'
-import { getPayload } from 'payload'
-import { redirect } from 'next/navigation'
 import { AddressListing } from '@/components/addresses/AddressListing'
 import { CreateAddressModal } from '@/components/addresses/CreateAddressModal'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
+import configPromise from '@payload-config'
+import { headers as getHeaders } from 'next/headers.js'
+import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
+import React from 'react'
 
 export default async function AddressesPage() {
   const headers = await getHeaders()
   const payload = await getPayload({ config: configPromise })
   const { user } = await payload.auth({ headers })
 
-  let orders: Order[] | null = null
-
   if (!user) {
-    redirect(
-      `/login?warning=${encodeURIComponent('Please login to access your account settings.')}`,
-    )
-  }
-
-  try {
-    const ordersResult = await payload.find({
-      collection: 'orders',
-      limit: 5,
-      user,
-      overrideAccess: false,
-      pagination: false,
-      where: {
-        customer: {
-          equals: user?.id,
-        },
-      },
-    })
-
-    orders = ordersResult?.docs || []
-  } catch (error) {
-    // when deploying this template on Payload Cloud, this page needs to build before the APIs are live
-    // so swallow the error here and simply render the page with fallback data where necessary
-    // in production you may want to redirect to a 404  page or at least log the error somewhere
-    // console.error(error)
+    redirect(`/login?warning=${encodeURIComponent('Connectez-vous pour gérer vos adresses.')}`)
   }
 
   return (
-    <>
-      <div className="border p-8 rounded-lg bg-primary-foreground">
-        <h1 className="text-3xl font-medium mb-8">Addresses</h1>
-
-        <div className="mb-8">
-          <AddressListing />
-        </div>
-
-        <CreateAddressModal />
+    <section className="surface surface-pad">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+          Mes adresses
+        </h1>
+        <CreateAddressModal className="w-full sm:w-auto" />
       </div>
-    </>
+
+      <AddressListing />
+    </section>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Manage your addresses.',
+  description: 'Gérez vos adresses de livraison Formula K.',
   openGraph: mergeOpenGraph({
-    title: 'Addresses',
+    title: 'Mes adresses',
     url: '/account/addresses',
   }),
-  title: 'Addresses',
+  title: 'Mes adresses',
 }

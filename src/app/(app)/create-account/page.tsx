@@ -1,14 +1,14 @@
 import type { Metadata } from 'next'
 
-import { RenderParams } from '@/components/RenderParams'
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import React from 'react'
-import { headers as getHeaders } from 'next/headers'
-import configPromise from '@payload-config'
-import { getPayload } from 'payload'
-
+import { AuthLink, AuthShell } from '@/components/auth/AuthShell'
 import { CreateAccountForm } from '@/components/forms/CreateAccountForm'
+import { RenderParams } from '@/components/RenderParams'
+import configPromise from '@payload-config'
+import { UserPlus } from 'lucide-react'
+import { headers as getHeaders } from 'next/headers.js'
+import { getPayload } from 'payload'
 import { redirect } from 'next/navigation'
+import React from 'react'
 
 export default async function CreateAccount() {
   const headers = await getHeaders()
@@ -16,23 +16,31 @@ export default async function CreateAccount() {
   const { user } = await payload.auth({ headers })
 
   if (user) {
-    redirect(`/account?warning=${encodeURIComponent('You are already logged in.')}`)
+    redirect(`/account?warning=${encodeURIComponent('Vous êtes déjà connecté.')}`)
   }
 
   return (
-    <div className="container py-16">
-      <h1 className="text-xl mb-4">Create Account</h1>
+    <AuthShell
+      description="Suivez vos commandes, enregistrez vos adresses et cumulez des points Glow Rewards."
+      footer={
+        <>
+          Déjà client ? <AuthLink href="/login">Se connecter</AuthLink>
+        </>
+      }
+      icon={UserPlus}
+      title="Créer un compte"
+    >
       <RenderParams />
       <CreateAccountForm />
-    </div>
+    </AuthShell>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Create an account or log in to your existing account.',
-  openGraph: mergeOpenGraph({
-    title: 'Account',
-    url: '/account',
-  }),
-  title: 'Account',
+  description: 'Créez votre compte Formula K pour suivre vos commandes.',
+  openGraph: {
+    title: 'Créer un compte',
+    url: '/create-account',
+  },
+  title: 'Créer un compte',
 }

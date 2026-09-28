@@ -1,8 +1,9 @@
 'use client'
 
+import { AuthLink, AuthShell } from '@/components/auth/AuthShell'
 import { useAuth } from '@/providers/Auth'
-import Link from 'next/link'
-import React, { Fragment, useEffect, useState } from 'react'
+import { LogOut } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
 
 export const LogoutPage: React.FC = () => {
   const { logout } = useAuth()
@@ -13,32 +14,33 @@ export const LogoutPage: React.FC = () => {
     const performLogout = async () => {
       try {
         await logout()
-        setSuccess('Logged out successfully.')
+        setSuccess('Vous êtes déconnecté.')
       } catch (_) {
-        setError('You are already logged out.')
+        setError('Vous êtes déjà déconnecté.')
       }
     }
 
     void performLogout()
   }, [logout])
 
+  const title = error || success
+
+  if (!title) return null
+
   return (
-    <Fragment>
-      {(error || success) && (
-        <div className="prose dark:prose-invert">
-          <h1>{error || success}</h1>
-          <p>
-            What would you like to do next?
-            <Fragment>
-              {' '}
-              <Link href="/shop">Click here</Link>
-              {` to shop.`}
-            </Fragment>
-            {` To log back in, `}
-            <Link href="/login">click here</Link>.
-          </p>
-        </div>
-      )}
-    </Fragment>
+    <AuthShell
+      description="Merci de votre visite, à très bientôt chez Formula K."
+      footer={
+        <>
+          Vous voulez revenir ? <AuthLink href="/login">Se connecter</AuthLink>
+        </>
+      }
+      icon={LogOut}
+      title={title}
+    >
+      <p className="text-sm text-muted">
+        Vous pouvez continuer vos achats quand vous le souhaitez.
+      </p>
+    </AuthShell>
   )
 }

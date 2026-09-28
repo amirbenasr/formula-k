@@ -6,11 +6,11 @@ test.describe('Authentication', () => {
     await page.goto('/login')
 
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toHaveText('Log in')
+    await expect(heading).toHaveText('Connexion')
 
     await expect(page.locator('input#email')).toBeVisible()
     await expect(page.locator('input#password')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible()
   })
 
   test('login with invalid credentials shows error', async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe('Authentication', () => {
 
     await page.locator('input#email').fill('wrong@example.com')
     await page.locator('input#password').fill('wrongpassword')
-    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: 'Se connecter' }).click()
 
     // Should show an error message (stays on login page)
     await expect(page).toHaveURL(/\/login/)
@@ -31,7 +31,7 @@ test.describe('Authentication', () => {
     await page.goto('/create-account')
 
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toHaveText('Create Account')
+    await expect(heading).toHaveText('Créer un compte')
 
     await expect(page.locator('input#email')).toBeVisible()
     await expect(page.locator('input#password')).toBeVisible()
@@ -45,10 +45,10 @@ test.describe('Authentication', () => {
     await page.locator('input#email').fill(uniqueEmail)
     await page.locator('input#password').fill('TestPassword123!')
     await page.locator('input#passwordConfirm').fill('TestPassword123!')
-    await page.getByRole('button', { name: 'Create Account' }).click()
+    await page.getByRole('button', { name: 'Créer mon compte' }).click()
 
     // Should show success message
-    const success = page.getByText('Check Your Email')
+    const success = page.getByText('Vérifiez votre e-mail')
     await expect(success).toBeVisible({ timeout: 10000 })
   })
 
@@ -58,7 +58,7 @@ test.describe('Authentication', () => {
     await page.locator('input#email').fill('mismatch@formulak.test')
     await page.locator('input#password').fill('TestPassword123!')
     await page.locator('input#passwordConfirm').fill('DifferentPassword!')
-    await page.getByRole('button', { name: 'Create Account' }).click()
+    await page.getByRole('button', { name: 'Créer mon compte' }).click()
 
     // Should remain on the create-account page with an error
     await expect(page).toHaveURL(/\/create-account/)
@@ -68,13 +68,13 @@ test.describe('Authentication', () => {
     await page.goto('/logout')
 
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText(/logged out/i)
+    await expect(heading).toContainText(/déconnecté/i)
   })
 
   test('login link navigates from create account page', async ({ page }) => {
     await page.goto('/create-account')
 
-    const loginLink = page.getByRole('link', { name: 'Login' })
+    const loginLink = page.getByRole('link', { name: 'Se connecter' })
     await expect(loginLink).toBeVisible()
     await loginLink.click()
 
@@ -84,7 +84,7 @@ test.describe('Authentication', () => {
   test('create account link navigates from login page', async ({ page }) => {
     await page.goto('/login')
 
-    const createLink = page.getByRole('link', { name: /Create an account/i })
+    const createLink = page.getByRole('link', { name: /Créer un compte/i })
     await expect(createLink).toBeVisible()
     await createLink.click()
 

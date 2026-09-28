@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/providers/Auth'
+import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 
@@ -30,26 +31,18 @@ export const RewardsHeaderWidget: React.FC = () => {
     return null
   }
 
-  if (!user.rewardsEnabled) {
-    return (
-      <Link
-        href="/rewards"
-        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gradient-to-r from-rose-100 to-amber-100 dark:from-rose-950/40 dark:to-amber-950/40 rounded-full hover:opacity-80 transition-opacity"
-      >
-        <span>✨</span>
-        <span className="font-medium">Join Rewards</span>
-      </Link>
-    )
-  }
-
   return (
     <Link
-      href="/account/rewards"
-      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gradient-to-r from-rose-100 to-amber-100 dark:from-rose-950/40 dark:to-amber-950/40 rounded-full hover:opacity-80 transition-opacity"
+      className="hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm text-primary-ink transition-colors hover:bg-primary/20 sm:flex"
+      href={user.rewardsEnabled ? '/account/rewards' : '/rewards'}
     >
-      <span>✨</span>
+      <Sparkles className="h-3.5 w-3.5" />
       <span className="font-medium">
-        {points !== null ? `${points.toLocaleString()} pts` : '...'}
+        {!user.rewardsEnabled
+          ? 'Glow Rewards'
+          : points !== null
+            ? `${points.toLocaleString('fr-FR')} pts`
+            : '…'}
       </span>
     </Link>
   )

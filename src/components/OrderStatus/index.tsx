@@ -6,19 +6,33 @@ type Props = {
   className?: string
 }
 
+/**
+ * Orders are created as `processing` and are settled on delivery (COD), so the
+ * shopper-facing wording is about the delivery, not about payment capture.
+ */
+const labels: Record<string, string> = {
+  processing: 'En préparation',
+  completed: 'Livrée',
+  cancelled: 'Annulée',
+  refunded: 'Remboursée',
+}
+
 export const OrderStatus: React.FC<Props> = ({ status, className }) => {
+  if (!status) return null
+
   return (
-    <div
+    <span
       className={cn(
-        'text-xs tracking-widest font-mono uppercase py-0 px-2 rounded w-fit',
+        'inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-medium',
         className,
         {
-          'bg-primary/10': status === 'processing',
-          'bg-success': status === 'completed',
+          'bg-primary/15 text-primary-ink': status === 'processing',
+          'bg-accent/20 text-accent-800': status === 'completed',
+          'bg-secondary/50 text-muted': status === 'cancelled' || status === 'refunded',
         },
       )}
     >
-      {status}
-    </div>
+      {labels[status] ?? status}
+    </span>
   )
 }

@@ -15,7 +15,7 @@ export function CategoryCircles({ categories }: Props) {
   if (categories.length === 0) return null
 
   return (
-    <section className="bg-secondary/25 py-10 dark:bg-card/40 lg:py-14">
+    <section className="bg-secondary/40 py-10 lg:py-14">
       <div className="container">
         <SectionHeading
           eyebrow="Votre routine"
@@ -41,13 +41,13 @@ export function CategoryCircles({ categories }: Props) {
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-primary/50">
+                  <span className="flex h-full w-full items-center justify-center text-primary-ink/50">
                     <Droplet className="h-7 w-7" />
                   </span>
                 )}
               </span>
 
-              <span className="text-[13px] font-medium leading-tight text-foreground transition-colors group-hover:text-primary">
+              <span className="text-[13px] font-medium leading-tight text-foreground transition-colors group-hover:text-primary-ink">
                 {category.title}
               </span>
 

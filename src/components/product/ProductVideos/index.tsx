@@ -41,7 +41,12 @@ export function ProductVideos({ videos, productTitle }: ProductVideosProps) {
   }
 
   const isExternalVideo = (url: string): boolean => {
-    return url.includes('youtube') || url.includes('youtu.be') || url.includes('tiktok') || url.includes('instagram')
+    return (
+      url.includes('youtube') ||
+      url.includes('youtu.be') ||
+      url.includes('tiktok') ||
+      url.includes('instagram')
+    )
   }
 
   // Check if URL needs to be proxied (external video CDNs with CORS issues)
@@ -171,14 +176,11 @@ export function ProductVideos({ videos, productTitle }: ProductVideosProps) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={closeModal}
         >
-          <div
-            className="relative w-full max-w-4xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="relative w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
             {/* Close button */}
             <button
               onClick={closeModal}
-              className="absolute -top-12 right-0 p-2 text-white hover:text-primary transition-colors"
+              className="absolute -top-12 right-0 p-2 text-white hover:text-primary-ink transition-colors"
               aria-label="Close video"
             >
               <X className="w-8 h-8" />
@@ -187,7 +189,9 @@ export function ProductVideos({ videos, productTitle }: ProductVideosProps) {
             {/* Video container */}
             <div
               className={`relative overflow-hidden rounded-xl bg-black ${
-                currentVideo.isVertical !== false ? 'aspect-[9/16] max-h-[80vh] mx-auto' : 'aspect-video'
+                currentVideo.isVertical !== false
+                  ? 'aspect-[9/16] max-h-[80vh] mx-auto'
+                  : 'aspect-video'
               }`}
               style={currentVideo.isVertical !== false ? { maxWidth: '400px' } : {}}
             >

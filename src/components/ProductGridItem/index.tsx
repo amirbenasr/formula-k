@@ -1,4 +1,4 @@
-import type { Product, Variant } from '@/payload-types'
+import type { Product } from '@/payload-types'
 
 import Link from 'next/link'
 import React from 'react'
@@ -10,8 +10,12 @@ type Props = {
   product: Partial<Product>
 }
 
+/**
+ * Minimal product tile kept for backwards compatibility with the template.
+ * Shares the single `surface` treatment used by every other listing tile.
+ */
 export const ProductGridItem: React.FC<Props> = ({ product }) => {
-  const { gallery, priceInUSD, title } = product
+  const { gallery, priceInUSD, title, inventory } = product
 
   let price = priceInUSD
 
@@ -32,31 +36,48 @@ export const ProductGridItem: React.FC<Props> = ({ product }) => {
   const image =
     gallery?.[0]?.image && typeof gallery[0]?.image !== 'string' ? gallery[0]?.image : false
 
+  const soldOut = inventory === 0
+
   return (
-    <Link className="relative inline-block h-full w-full group" href={`/products/${product.slug}`}>
-      {image ? (
-        <Media
-          className={clsx(
-            'relative aspect-square object-cover border rounded-2xl p-8 bg-primary-foreground',
-          )}
-          height={80}
-          imgClassName={clsx('h-full w-full object-cover rounded-2xl', {
-            'transition duration-300 ease-in-out group-hover:scale-102': true,
-          })}
-          resource={image}
-          width={80}
-        />
-      ) : null}
-
-      <div className="font-mono text-primary/50 group-hover:text-primary flex justify-between items-center mt-4">
-        <div>{title}</div>
-
-        {typeof price === 'number' && (
-          <div className="">
-            <Price amount={price} />
-          </div>
+    <Link
+      className="surface group relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-hover"
+      href={`/products/${product.slug}`}
+    >
+      <span className="relative block aspect-square overflow-hidden bg-secondary/40">
+        {image ? (
+          <Media
+            fill
+            imgClassName={clsx(
+              'object-cover transition duration-300 ease-in-out group-hover:scale-105',
+              {
+                'opacity-60 saturate-50': soldOut,
+              },
+            )}
+            resource={image}
+            size="(min-width: 1024px) 22vw, 45vw"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-xs text-muted">
+            Photo à venir
+          </span>
         )}
-      </div>
+      </span>
+
+      <span className="flex items-center justify-between gap-2 p-3.5 sm:p-4">
+        <span className="line-clamp-2 text-sm font-medium leading-snug text-foreground transition-colors group-hover:text-primary-ink">
+          {title}
+        </span>
+
+        {typeof price === 'number' ? (
+          <Price
+            amount={price}
+            className={clsx(
+              'shrink-0 font-semibold tracking-tight',
+              soldOut ? 'text-muted' : 'text-foreground',
+            )}
+          />
+        ) : null}
+      </span>
     </Link>
   )
 }

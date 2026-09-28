@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
 
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import React, { Suspense } from 'react'
-
 import { ResetPasswordForm } from '@/components/forms/ResetPasswordForm'
+import React, { Suspense } from 'react'
 
 function ResetPasswordContent() {
   return <ResetPasswordForm />
@@ -11,19 +9,17 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="container py-16">
-      <Suspense fallback={<div>Loading...</div>}>
-        <ResetPasswordContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={null}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Reset your password.',
-  openGraph: mergeOpenGraph({
-    title: 'Reset Password',
+  description: 'Choisissez un nouveau mot de passe pour votre compte Formula K.',
+  openGraph: {
+    title: 'Nouveau mot de passe',
     url: '/reset-password',
-  }),
-  title: 'Reset Password',
+  },
+  title: 'Nouveau mot de passe',
 }

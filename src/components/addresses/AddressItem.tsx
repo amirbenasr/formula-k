@@ -35,45 +35,43 @@ export const AddressItem: React.FC<Props> = ({
     return null
   }
 
+  const cityLine = [address.city, address.state, address.postalCode].filter(Boolean).join(' ')
+
   return (
-    <div className="flex items-center">
-      <div className="grow">
-        <p className="font-medium">
-          {address.title && <span>{address.title} </span>}
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 text-sm text-muted">
+        <p className="font-medium text-foreground">
+          {address.title ? `${address.title} ` : ''}
           {address.firstName} {address.lastName}
         </p>
-        <p>{address.company && <span>{address.company} </span>}</p>
-        <p>{address.phone && <span>{address.phone}</span>}</p>
+        {address.company ? <p>{address.company}</p> : null}
+        {address.phone ? <p>{address.phone}</p> : null}
         <p>
           {address.addressLine1}
-          {address.addressLine2 && <>, {address.addressLine2}</>}
+          {address.addressLine2 ? `, ${address.addressLine2}` : ''}
         </p>
-        <p>
-          {address.city}, {address.state} {address.postalCode}
-        </p>
-        <p>{address.country}</p>
+        {cityLine ? <p>{cityLine}</p> : null}
+        {address.country ? <p>{address.country}</p> : null}
       </div>
 
-      {!hideActions && address.id && (
-        <div className="shrink flex flex-col gap-2">
+      {!hideActions && address.id ? (
+        <div className="flex shrink-0 flex-row gap-2 sm:flex-col">
           {actions ? (
             actions
           ) : (
             <>
               {beforeActions}
-              {address.id && (
-                <CreateAddressModal
-                  addressID={address.id}
-                  initialData={address}
-                  buttonText={'Edit'}
-                  modalTitle={'Edit address'}
-                />
-              )}
+              <CreateAddressModal
+                addressID={address.id}
+                buttonText="Modifier"
+                initialData={address}
+                modalTitle="Modifier l’adresse"
+              />
               {afterActions}
             </>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

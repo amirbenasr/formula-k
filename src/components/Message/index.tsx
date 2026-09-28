@@ -1,42 +1,46 @@
-import clsx from 'clsx'
+import { cn } from '@/utilities/cn'
+import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 import React from 'react'
 
-/* [
-          classes.message,
-          className,
-          error && classes.error,
-          success && classes.success,
-          warning && classes.warning,
-          !error && !success && !warning && classes.default,
-        ]
-          .filter(Boolean)
-          .join(' '), */
-
-export const Message: React.FC<{
+type Props = {
   className?: string
   error?: React.ReactNode
   message?: React.ReactNode
   success?: React.ReactNode
   warning?: React.ReactNode
-}> = ({ className, error, message, success, warning }) => {
+}
+
+/**
+ * Inline notice. The variant is carried by tone *and* an icon so a colour-blind
+ * shopper is not the only one who can tell an error from a confirmation.
+ * No baked-in vertical margin: the callers lay it out in their own stack.
+ */
+export const Message: React.FC<Props> = ({ className, error, message, success, warning }) => {
   const messageToRender = message || error || success || warning
 
-  if (messageToRender) {
-    return (
-      <div
-        className={clsx(
-          'p-4 my-8 rounded-lg',
-          {
-            'bg-success ': Boolean(success),
-            ' bg-warning': Boolean(warning),
-            'bg-error': Boolean(error),
-          },
-          className,
-        )}
-      >
-        {messageToRender}
-      </div>
-    )
+  if (!messageToRender) {
+    return null
   }
-  return null
+
+  const tone = error
+    ? { Icon: AlertTriangle, className: 'border-error/40 bg-error/15' }
+    : success
+      ? { Icon: CheckCircle2, className: 'border-accent/40 bg-accent/15' }
+      : warning
+        ? { Icon: AlertTriangle, className: 'border-warning/60 bg-warning/20' }
+        : { Icon: Info, className: 'border-border bg-secondary/40' }
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-xl border p-4 text-sm text-foreground',
+        tone.className,
+        className,
+      )}
+      role="status"
+    >
+      <tone.Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <div className="min-w-0">{messageToRender}</div>
+    </div>
+  )
 }

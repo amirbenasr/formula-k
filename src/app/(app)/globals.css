@@ -170,7 +170,14 @@
   --popover-foreground: #3d3d3d;
 
   --primary: #f28b82;
-  --primary-foreground: #ffffff;
+  /* The coral is a pastel: white text on it only reaches ~2.4:1. A deep warm
+     ink keeps filled buttons and the announcement bar at ~5.3:1. */
+  --primary-foreground: #5b2018;
+  /* Text/accent-on-background variant of the brand colour. `--primary` is a
+     fill: as *text* on the cream/white background it only reaches ~2.4:1.
+     `--primary-ink` is the readable version for links, labels and active
+     states, and stays palette- and theme-aware. */
+  --primary-ink: #a83a2e;
 
   --secondary: #f2a7b0;
   --secondary-foreground: #3d3d3d;
@@ -207,6 +214,8 @@
 
   --primary: #f28b82;
   --primary-foreground: #1a1a1a;
+  /* On the dark background the pastel coral is the readable one (~7:1). */
+  --primary-ink: #f5a79f;
 
   --secondary: #f2a7b0;
   --secondary-foreground: #1a1a1a;
@@ -242,6 +251,7 @@
 
   --primary: #b8d4e8;
   --primary-foreground: #1e3a5a;
+  --primary-ink: #2c5c8a;
 
   --secondary: #e8f0f8;
   --secondary-foreground: #3a4a5a;
@@ -275,6 +285,7 @@
 
   --primary: #b8d4e8;
   --primary-foreground: #0f1a2a;
+  --primary-ink: #b8d4e8;
 
   --secondary: #2a3a4a;
   --secondary-foreground: #e8f0f8;
@@ -306,6 +317,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-ink: var(--primary-ink);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -364,52 +376,22 @@ button {
 
 /* Component styles */
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  /* The single card/panel treatment. Used by checkout steps, account panels,
+     order summaries and the auth shells so every surface reads the same. */
+  .surface {
+    @apply bg-card rounded-2xl border border-border;
   }
 
-  .btn-primary {
-    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-accent text-white hover:bg-accent-600 focus:ring-accent shadow-soft hover:shadow-hover active:scale-[0.98];
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-primary text-white hover:bg-primary-600 focus:ring-primary shadow-soft hover:shadow-hover active:scale-[0.98];
-  }
-
-  .btn-outline {
-    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary;
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-pill px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-muted hover:bg-primary/10 hover:text-primary;
-  }
-
-  .card {
-    @apply bg-card rounded-soft shadow-card overflow-hidden transition-all duration-300 hover:shadow-hover;
+  .surface-pad {
+    @apply p-5 sm:p-6;
   }
 
   .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
   }
 
   .badge-new {
-    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-accent/20 text-accent-700;
-  }
-
-  .badge-bestseller {
-    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-primary/20 text-primary-700;
-  }
-
-  .badge-sale {
-    @apply inline-flex items-center px-3 py-1 rounded-pill text-xs font-medium bg-red-100 text-red-700;
-  }
-
-  .input-field {
-    @apply w-full rounded-soft border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-muted mb-2;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-accent/20 text-accent-800;
   }
 }
 

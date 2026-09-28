@@ -28,7 +28,6 @@ export function NewArrivals({ products }: Props) {
             <ProductCard
               key={product.id}
               product={product}
-              variant="compact"
               imageSizes="(min-width: 1024px) 20vw, 60vw"
             />
           ))}

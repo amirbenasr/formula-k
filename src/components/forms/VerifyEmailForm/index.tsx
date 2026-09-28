@@ -1,10 +1,13 @@
 'use client'
 
+import { AuthShell } from '@/components/auth/AuthShell'
 import { Message } from '@/components/Message'
 import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { MailCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import React, { Fragment, useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 export const VerifyEmailForm: React.FC = () => {
   const searchParams = useSearchParams()
@@ -16,7 +19,7 @@ export const VerifyEmailForm: React.FC = () => {
 
   const verifyEmail = useCallback(async () => {
     if (!token) {
-      setError('Missing verification token.')
+      setError('Jeton de vérification manquant.')
       setLoading(false)
       return
     }
@@ -35,10 +38,12 @@ export const VerifyEmailForm: React.FC = () => {
         setError('')
       } else {
         const data = await res.json()
-        setError(data?.errors?.[0]?.message || 'Verification failed. The link may have expired.')
+        setError(
+          data?.errors?.[0]?.message || 'La vérification a échoué. Le lien a peut-être expiré.',
+        )
       }
-    } catch (e) {
-      setError('There was a problem verifying your email. Please try again.')
+    } catch {
+      setError('La vérification de votre e-mail a échoué. Merci de réessayer.')
     } finally {
       setLoading(false)
     }
@@ -50,56 +55,58 @@ export const VerifyEmailForm: React.FC = () => {
 
   if (!token) {
     return (
-      <Fragment>
-        <h1 className="text-xl mb-4">Invalid Verification Link</h1>
-        <div className="prose dark:prose-invert">
-          <p>
-            This email verification link is invalid. Please check your email for the correct link or{' '}
-            <Link href="/login">login to your account</Link> to request a new verification email.
-          </p>
-        </div>
-      </Fragment>
+      <AuthShell
+        description="Ce lien de vérification est invalide. Ouvrez le lien reçu par e-mail ou connectez-vous pour en demander un nouveau."
+        icon={MailCheck}
+        title="Lien invalide"
+      >
+        <Button asChild className="w-full" size="lg">
+          <Link href="/login">Se connecter</Link>
+        </Button>
+      </AuthShell>
     )
   }
 
   if (loading) {
     return (
-      <Fragment>
-        <h1 className="text-xl mb-4">Verifying Your Email</h1>
-        <div className="prose dark:prose-invert">
-          <p>Please wait while we verify your email address...</p>
+      <AuthShell
+        description="Vérification de votre adresse e-mail en cours…"
+        icon={MailCheck}
+        title="Vérification en cours"
+      >
+        <div className="flex justify-center py-4">
+          <LoadingSpinner />
         </div>
-      </Fragment>
+      </AuthShell>
+    )
+  }
+
+  if (!success) {
+    return (
+      <AuthShell
+        description="Le lien de vérification a peut-être expiré ou a déjà été utilisé."
+        icon={MailCheck}
+        title="Vérification impossible"
+      >
+        <div className="flex flex-col gap-5">
+          <Message error={error} />
+          <Button asChild className="w-full" size="lg">
+            <Link href="/login">Se connecter pour demander un nouveau lien</Link>
+          </Button>
+        </div>
+      </AuthShell>
     )
   }
 
   return (
-    <Fragment>
-      {!success && (
-        <Fragment>
-          <h1 className="text-xl mb-4">Verification Failed</h1>
-          <Message className="mb-8" error={error} />
-          <div className="prose dark:prose-invert mb-8">
-            <p>
-              The verification link may have expired or already been used. Please{' '}
-              <Link href="/login">login to your account</Link> to request a new verification email.
-            </p>
-          </div>
-        </Fragment>
-      )}
-      {success && (
-        <Fragment>
-          <h1 className="text-xl mb-4">Email Verified Successfully!</h1>
-          <div className="prose dark:prose-invert mb-8">
-            <p>
-              Your email has been verified. You can now access all features of your account.
-            </p>
-          </div>
-          <Button asChild variant="default">
-            <Link href="/login">Go to Login</Link>
-          </Button>
-        </Fragment>
-      )}
-    </Fragment>
+    <AuthShell
+      description="Votre adresse e-mail est vérifiée. Vous pouvez accéder à toutes les fonctionnalités de votre compte."
+      icon={MailCheck}
+      title="E-mail vérifié"
+    >
+      <Button asChild className="w-full" size="lg">
+        <Link href="/login">Se connecter</Link>
+      </Button>
+    </AuthShell>
   )
 }

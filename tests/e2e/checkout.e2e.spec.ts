@@ -1,16 +1,11 @@
 import { test, expect } from '@playwright/test'
-import {
-  CUSTOMER_AUTH_FILE,
-  CUSTOMER_EMAIL,
-  GUEST_EMAIL,
-  TEST_ADDRESS,
-} from './fixtures/test-data'
+import { CUSTOMER_AUTH_FILE, CUSTOMER_EMAIL, GUEST_EMAIL, TEST_ADDRESS } from './fixtures/test-data'
 
 test.describe('Checkout (empty cart)', () => {
   test('shows empty cart message when visiting /checkout without items', async ({ page }) => {
     await page.goto('/checkout')
 
-    const emptyMessage = page.getByText('Your cart is empty.')
+    const emptyMessage = page.getByText('Votre panier est vide')
     await expect(emptyMessage).toBeVisible({ timeout: 10000 })
   })
 })
@@ -23,10 +18,10 @@ test.describe('Checkout (authenticated)', () => {
 
     // Add product to cart
     await page.goto('/products/test-product')
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 15000 })
     await addToCart.click()
-    await expect(page.getByText(/Item added to cart/)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Ajouté au panier')).toBeVisible({ timeout: 10000 })
 
     // Go to checkout
     await page.goto('/checkout')
@@ -36,12 +31,15 @@ test.describe('Checkout (authenticated)', () => {
     await expect(page.locator('main').getByText(CUSTOMER_EMAIL)).toBeVisible({ timeout: 15000 })
 
     // "Not you?" / Log out link should be visible
-    const logoutLink = page.getByRole('link', { name: /Log out/i })
+    const logoutLink = page.getByRole('link', { name: /Se déconnecter/i })
     await expect(logoutLink).toBeVisible()
 
     // Address section — add a new address if none exists
-    const addAddressButton = page.getByRole('button', { name: /Add a new address/i })
-    const addressAlreadyExists = await page.getByText(TEST_ADDRESS.addressLine1).isVisible().catch(() => false)
+    const addAddressButton = page.getByRole('button', { name: /Ajouter une adresse/i })
+    const addressAlreadyExists = await page
+      .getByText(TEST_ADDRESS.addressLine1)
+      .isVisible()
+      .catch(() => false)
 
     if (!addressAlreadyExists) {
       await expect(addAddressButton).toBeVisible({ timeout: 5000 })
@@ -60,17 +58,17 @@ test.describe('Checkout (authenticated)', () => {
       await page.getByRole('option', { name: /France/i }).click()
 
       // Submit address
-      await page.getByRole('button', { name: 'Submit' }).click()
+      await page.getByRole('button', { name: 'Enregistrer l’adresse' }).click()
     }
 
     // Address should now be shown
     await expect(page.getByText(TEST_ADDRESS.addressLine1)).toBeVisible({ timeout: 10000 })
 
     // Payment method should show COD
-    await expect(page.getByText('Cash on Delivery')).toBeVisible()
+    await expect(page.getByText('Paiement à la livraison')).toBeVisible()
 
     // Place order — wait for page to be fully ready
-    const placeOrder = page.getByRole('button', { name: /Place Order/i })
+    const placeOrder = page.getByRole('button', { name: /Confirmer la commande/ })
     await expect(placeOrder).toBeEnabled({ timeout: 10000 })
     await page.waitForLoadState('networkidle')
     await placeOrder.click()
@@ -82,10 +80,10 @@ test.describe('Checkout (authenticated)', () => {
   test('billing/shipping toggle shows separate address form', async ({ page }) => {
     // Add product to cart first
     await page.goto('/products/test-product')
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 10000 })
     await addToCart.click()
-    await expect(page.getByText(/Item added to cart/)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Ajouté au panier')).toBeVisible({ timeout: 10000 })
 
     await page.goto('/checkout')
 
@@ -95,7 +93,7 @@ test.describe('Checkout (authenticated)', () => {
       await shippingCheckbox.click()
 
       // A second address section should appear for shipping
-      await expect(page.getByText(/shipping/i).first()).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText(/facturation/i).first()).toBeVisible({ timeout: 5000 })
     }
   })
 })
@@ -106,10 +104,10 @@ test.describe('Checkout (guest)', () => {
 
     // Add product to cart
     await page.goto('/products/test-product')
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 15000 })
     await addToCart.click()
-    await expect(page.getByText(/Item added to cart/)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Ajouté au panier')).toBeVisible({ timeout: 10000 })
 
     // Go to checkout
     await page.goto('/checkout')
@@ -120,12 +118,8 @@ test.describe('Checkout (guest)', () => {
     await expect(emailInput).toBeVisible({ timeout: 15000 })
     await emailInput.fill(GUEST_EMAIL)
 
-    // Continue as guest
-    const continueButton = page.getByRole('button', { name: /Continue as guest/i })
-    await continueButton.click()
-
-    // Add address
-    const addAddressButton = page.getByRole('button', { name: /Add a new address/i })
+    // Add address (the address step unlocks as soon as the e-mail is valid)
+    const addAddressButton = page.getByRole('button', { name: /Ajouter une adresse/i })
     await expect(addAddressButton).toBeVisible({ timeout: 10000 })
     await addAddressButton.click()
 
@@ -139,13 +133,13 @@ test.describe('Checkout (guest)', () => {
     await countryTrigger.click()
     await page.getByRole('option', { name: /France/i }).click()
 
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Enregistrer l’adresse' }).click()
 
     // Wait for address to be set
     await expect(page.getByText(TEST_ADDRESS.addressLine1)).toBeVisible({ timeout: 10000 })
 
     // Place order — wait for page to be fully ready
-    const placeOrder = page.getByRole('button', { name: /Place Order/i })
+    const placeOrder = page.getByRole('button', { name: /Confirmer la commande/ })
     await expect(placeOrder).toBeEnabled({ timeout: 10000 })
     await page.waitForLoadState('networkidle')
     await placeOrder.click()

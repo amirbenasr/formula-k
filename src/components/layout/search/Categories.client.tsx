@@ -6,6 +6,17 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import Link from 'next/link'
 
+/**
+ * One sidebar entry. The active state follows the header convention
+ * (`text-primary-ink font-medium`) and nothing is underlined, so the category list
+ * and the sort list read as the same kind of control.
+ */
+const itemClassName = (isActive: boolean) =>
+  clsx(
+    'block py-1.5 text-sm transition-colors',
+    isActive ? 'font-medium text-primary-ink' : 'text-foreground/75 hover:text-primary-ink',
+  )
+
 type Props = {
   category: Category
 }
@@ -17,34 +28,30 @@ export const CategoryItem: React.FC<Props> = ({ category }) => {
     return pathname === `/shop/${category.slug}`
   }, [category.slug, pathname])
 
-  const href = isActive ? '/shop' : `/shop/${category.slug}`
-
   return (
     <Link
-      href={href}
-      className={clsx('hover:cursor-pointer', {
-        ' underline': isActive,
-      })}
+      href={`/shop/${category.slug}`}
+      aria-current={isActive ? 'page' : undefined}
+      className={itemClassName(isActive)}
     >
       {category.title}
     </Link>
   )
 }
 
+/** Always rendered so `/shop` and `/shop/[slug]` show the exact same list. */
 export const AllProductsLink: React.FC = () => {
   const pathname = usePathname()
 
-  const isOnCategoryPage = useMemo(() => {
-    return pathname.startsWith('/shop/') && pathname !== '/shop'
-  }, [pathname])
-
-  if (!isOnCategoryPage) {
-    return null
-  }
+  const isActive = pathname === '/shop'
 
   return (
-    <Link href="/shop" className="hover:cursor-pointer text-muted hover:underline">
-      Tous les Produits
+    <Link
+      aria-current={isActive ? 'page' : undefined}
+      className={itemClassName(isActive)}
+      href="/shop"
+    >
+      Tous les produits
     </Link>
   )
 }

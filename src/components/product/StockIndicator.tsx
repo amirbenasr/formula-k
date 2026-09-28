@@ -47,12 +47,25 @@ export const StockIndicator: React.FC<Props> = ({ product }) => {
   }
 
   return (
-    <div className="text-sm font-medium">
+    <div className="flex flex-col items-start gap-2 text-sm font-medium">
       {stockQuantity < 5 && stockQuantity > 0 ? (
-        <p className="text-error">Plus que {stockQuantity} en stock — commandez vite</p>
+        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-error/10 px-3 py-1 text-foreground">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-error" />
+          Plus que {stockQuantity} en stock — commandez vite
+        </p>
       ) : null}
-      {stockQuantity >= 5 ? <p className="text-accent">En stock, expédié sous 24h</p> : null}
-      {(stockQuantity === 0 || !stockQuantity) && <p className="text-muted">Rupture de stock</p>}
+      {stockQuantity >= 5 ? (
+        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-foreground">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
+          En stock, expédié sous 24h
+        </p>
+      ) : null}
+      {stockQuantity === 0 || !stockQuantity ? (
+        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-secondary/70 px-3 py-1 text-muted">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-muted" />
+          Rupture de stock
+        </p>
+      ) : null}
     </div>
   )
 }

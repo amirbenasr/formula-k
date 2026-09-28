@@ -99,7 +99,7 @@ export function VariantSelector({ product }: { product: Product }) {
                   variant={'ghost'}
                   aria-disabled={!isAvailableForSale}
                   className={clsx('px-2', {
-                    'bg-primary/5 text-primary': isActive,
+                    'bg-primary/5 text-primary-ink': isActive,
                   })}
                   disabled={!isAvailableForSale}
                   key={option.id}

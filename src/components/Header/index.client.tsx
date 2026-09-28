@@ -7,7 +7,17 @@ import { LogoIcon } from '@/components/icons/logo'
 import { RewardsHeaderWidget } from '@/components/rewards/RewardsHeaderWidget'
 import { useAuth } from '@/providers/Auth'
 import { cn } from '@/utilities/cn'
-import { ChevronDown, CreditCard, LayoutGrid, Menu, Search, Sparkles, Truck, User, X } from 'lucide-react'
+import {
+  Banknote,
+  ChevronDown,
+  LayoutGrid,
+  Menu,
+  Search,
+  Sparkles,
+  Truck,
+  User,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { Suspense, useEffect, useState } from 'react'
@@ -56,20 +66,20 @@ export function HeaderClient({ header, categories }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const featuredCategories = categories.slice(0, 6)
-
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
-      {/* Announcement bar — the three facts Tunisian COD shoppers look for */}
-      <div className="bg-primary text-white">
-        <div className="container flex items-center justify-center gap-x-5 overflow-x-auto py-2 text-[11px] font-medium [scrollbar-width:none] sm:gap-x-6 sm:text-xs [&::-webkit-scrollbar]:hidden">
+      {/* Announcement bar — the three facts Tunisian COD shoppers look for.
+          Text colour comes from --primary-foreground (deep ink) because white
+          on the pastel coral only reaches ~2.4:1. */}
+      <div className="bg-primary text-primary-foreground">
+        <div className="container flex items-center justify-center gap-x-5 overflow-x-auto py-2 text-[11px] font-semibold [scrollbar-width:none] sm:gap-x-6 sm:text-xs [&::-webkit-scrollbar]:hidden">
           <span className="flex shrink-0 items-center gap-1.5">
             <Truck className="h-3.5 w-3.5" />
             <span className="sm:hidden">Livraison 24–48h</span>
             <span className="hidden sm:inline">Livraison 24–48h partout en Tunisie</span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
-            <CreditCard className="h-3.5 w-3.5" />
+            <Banknote className="h-3.5 w-3.5" />
             <span className="sm:hidden">Paiement à la livraison</span>
             <span className="hidden sm:inline">Paiement à la livraison</span>
           </span>
@@ -94,13 +104,15 @@ export function HeaderClient({ header, categories }: Props) {
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <LogoIcon className="h-8 w-auto" />
-            <span className="hidden font-serif text-2xl font-bold text-primary sm:inline lg:text-[26px]">
+            <span className="hidden font-serif text-2xl font-bold text-primary-ink sm:inline lg:text-[26px]">
               Formula K
             </span>
           </Link>
 
-          {/* Search — always visible on desktop, that is where discovery happens */}
-          <div className="hidden max-w-xl flex-1 lg:block">
+          {/* Search — always visible on desktop, that is where discovery happens.
+              No max-width: it used to stop at 576px and leave a ~410px dead gap
+              between the field and the account/cart icons. */}
+          <div className="hidden flex-1 lg:block">
             <SearchBox />
           </div>
 
@@ -140,64 +152,66 @@ export function HeaderClient({ header, categories }: Props) {
         ) : null}
 
         {/* Desktop catalog navigation */}
-        <nav className="hidden items-center justify-between border-t border-border/70 lg:flex">
-          <div className="flex items-center gap-1">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen((value) => !value)}
-                onMouseEnter={() => setCategoriesOpen(true)}
-                aria-expanded={categoriesOpen}
-                className="flex cursor-pointer items-center gap-2 py-3 pr-3 text-sm font-semibold text-foreground transition-colors hover:text-primary"
+        <nav className="hidden items-center gap-3 border-t border-border/70 lg:flex">
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setCategoriesOpen((value) => !value)}
+              onMouseEnter={() => setCategoriesOpen(true)}
+              aria-expanded={categoriesOpen}
+              className="flex cursor-pointer items-center gap-2 py-3 pr-3 text-sm font-semibold text-foreground transition-colors hover:text-primary-ink"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Toutes les catégories
+              <ChevronDown
+                className={cn('h-3.5 w-3.5 transition-transform', categoriesOpen && 'rotate-180')}
+              />
+            </button>
+
+            {categoriesOpen && categories.length > 0 ? (
+              <div
+                onMouseLeave={() => setCategoriesOpen(false)}
+                className="absolute left-0 top-full z-50 w-[520px] overflow-hidden rounded-2xl border border-border bg-card p-2 shadow-hover"
               >
-                <LayoutGrid className="h-4 w-4" />
-                Toutes les catégories
-                <ChevronDown
-                  className={cn('h-3.5 w-3.5 transition-transform', categoriesOpen && 'rotate-180')}
-                />
-              </button>
-
-              {categoriesOpen && categories.length > 0 ? (
-                <div
-                  onMouseLeave={() => setCategoriesOpen(false)}
-                  className="absolute left-0 top-full z-50 w-[520px] overflow-hidden rounded-2xl border border-border bg-card p-2 shadow-hover"
-                >
-                  <div className="grid grid-cols-2 gap-1">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.id}
-                        href={`/shop/${category.slug}`}
-                        onClick={() => setCategoriesOpen(false)}
-                        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm text-foreground transition hover:bg-secondary/40 hover:text-primary"
-                      >
-                        <span className="truncate">{category.title}</span>
-                        {category.productCount ? (
-                          <span className="shrink-0 text-[11px] text-muted">
-                            {category.productCount}
-                          </span>
-                        ) : null}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <Link
-                    href="/shop"
-                    onClick={() => setCategoriesOpen(false)}
-                    className="mt-1 block rounded-xl bg-secondary/30 px-3 py-2 text-center text-[13px] font-medium text-primary hover:underline"
-                  >
-                    Voir toute la boutique
-                  </Link>
+                <div className="grid grid-cols-2 gap-1">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      href={`/shop/${category.slug}`}
+                      onClick={() => setCategoriesOpen(false)}
+                      className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm text-foreground transition hover:bg-secondary/40 hover:text-primary-ink"
+                    >
+                      <span className="truncate">{category.title}</span>
+                      {category.productCount ? (
+                        <span className="shrink-0 text-[11px] text-muted">
+                          {category.productCount}
+                        </span>
+                      ) : null}
+                    </Link>
+                  ))}
                 </div>
-              ) : null}
-            </div>
 
-            {featuredCategories.map((category) => (
+                <Link
+                  href="/shop"
+                  onClick={() => setCategoriesOpen(false)}
+                  className="mt-1 block rounded-xl bg-secondary/30 px-3 py-2 text-center text-[13px] font-medium text-primary-ink hover:underline"
+                >
+                  Voir toute la boutique
+                </Link>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Every category, not just the first six — "Solaires" and "Toniques"
+              used to be reachable only from the mobile menu and the sidebar. */}
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {categories.map((category) => (
               <Link
                 key={category.id}
                 href={`/shop/${category.slug}`}
                 className={cn(
-                  'px-2.5 py-3 text-sm text-muted transition-colors hover:text-primary',
-                  pathname === `/shop/${category.slug}` && 'font-medium text-primary',
+                  'shrink-0 px-2.5 py-3 text-sm text-muted transition-colors hover:text-primary-ink',
+                  pathname === `/shop/${category.slug}` && 'font-medium text-primary-ink',
                 )}
               >
                 {category.title}
@@ -206,21 +220,24 @@ export function HeaderClient({ header, categories }: Props) {
 
             <Link
               href="/shop?sort=-createdAt"
-              className="px-2.5 py-3 text-sm text-muted transition-colors hover:text-primary"
+              className={cn(
+                'shrink-0 px-2.5 py-3 text-sm text-muted transition-colors hover:text-primary-ink',
+                pathname === '/shop' && 'font-medium text-primary-ink',
+              )}
             >
               Nouveautés
             </Link>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             {menu.map((item) => (
               <CMSLink
                 key={item.id}
                 {...item.link}
                 className={cn(
-                  'px-2.5 py-3 text-[13px] font-medium text-muted transition-colors hover:text-primary',
+                  'px-2.5 py-3 text-[13px] font-medium text-muted transition-colors hover:text-primary-ink',
                   {
-                    'text-primary':
+                    'text-primary-ink':
                       item.link.url && item.link.url !== '/'
                         ? pathname.includes(item.link.url)
                         : false,
