@@ -38,6 +38,29 @@ type Props = {
 const LOW_STOCK_THRESHOLD = 4
 const NEW_WINDOW_DAYS = 21
 
+/** One shape, one position — the colour tells the state apart. */
+const stateBadgeClassName =
+  'absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide shadow-soft'
+
+/**
+ * Product titles usually repeat the brand ("COSRX Crème Avancée Snail Mucin").
+ * When the brand kicker is rendered above the title, the leading repeat is
+ * dropped from the label only — the product data itself is never mutated.
+ */
+function productLabel(title: string, brandName?: string): string {
+  const trimmed = title.trim()
+  const prefix = brandName?.trim()
+
+  if (!prefix || !trimmed.toLowerCase().startsWith(prefix.toLowerCase())) return trimmed
+
+  const rest = trimmed
+    .slice(prefix.length)
+    .replace(/^[\s\-–—:·|/]+/, '')
+    .trim()
+
+  return rest.length > 0 ? rest : trimmed
+}
+
 function toMedia(value: Product['gallery'] | null | undefined): MediaType | undefined {
   const image = value?.[0]?.image
   return image && typeof image === 'object' ? image : undefined
@@ -89,17 +112,18 @@ export function ProductCard({
 
   const href = `/products/${slug}`
   const compact = variant === 'compact'
+  const label = productLabel(title, brandName)
 
   return (
     <div
       className={cn(
-        'group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-hover',
+        'surface group/card relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-hover',
         className,
       )}
     >
       <Link
         href={href}
-        className="relative block aspect-square overflow-hidden bg-[#faf6f5]"
+        className="relative block aspect-square overflow-hidden bg-secondary/40"
         aria-label={title}
         tabIndex={-1}
       >
@@ -135,7 +159,7 @@ export function ProductCard({
           <span
             className={cn(
               'absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-soft',
-              rank <= 3 ? 'bg-primary text-white' : 'bg-card/95 text-foreground',
+              rank <= 3 ? 'bg-primary text-primary-foreground' : 'bg-card/95 text-foreground',
             )}
             aria-label={`N°${rank} des ventes`}
           >
@@ -143,46 +167,39 @@ export function ProductCard({
           </span>
         ) : null}
 
-        {/* Freshness badge */}
+        {/* Freshness badge — same shape and corner as the stock badge */}
         {isNew && !soldOut && typeof rank !== 'number' ? (
-          <span className="badge-new absolute right-2.5 top-2.5 gap-1 bg-card/95 py-1 text-[10px] font-semibold uppercase tracking-wide shadow-soft">
+          <span className={cn(stateBadgeClassName, 'bg-accent/20 text-foreground')}>
             <Sparkles className="h-3 w-3" />
             Nouveau
           </span>
         ) : null}
 
         {soldOut ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-            <span className="rounded-pill bg-foreground/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
-              Rupture de stock
-            </span>
-          </div>
+          <span className={cn(stateBadgeClassName, 'bg-foreground text-background')}>
+            Rupture de stock
+          </span>
         ) : null}
       </Link>
 
-      <div
-        className={cn(
-          'flex flex-1 flex-col gap-1.5',
-          compact ? 'p-3' : 'p-3.5 sm:p-4',
-        )}
-      >
+      <div className={cn('flex flex-1 flex-col gap-1.5', compact ? 'p-3' : 'p-3.5 sm:p-4')}>
+        {/* Brand kicker: intentionally not a second link to the same product —
+            the image and the title already link there, and a bare 17px link is
+            below the minimum tap target. */}
         {brandName ? (
-          <Link
-            href={href}
-            className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted transition-colors group-hover/card:text-primary"
-          >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
             {brandName}
-          </Link>
+          </span>
         ) : null}
 
-        <Link href={href} className="block">
+        <Link className="block min-h-6" href={href}>
           <h3
             className={cn(
-              'line-clamp-2 font-medium leading-snug text-foreground transition-colors group-hover/card:text-primary',
+              'line-clamp-2 font-medium leading-snug text-foreground transition-colors group-hover/card:text-primary-ink',
               compact ? 'text-[13px]' : 'text-sm',
             )}
           >
-            {title}
+            {label}
           </h3>
         </Link>
 
@@ -192,12 +209,15 @@ export function ProductCard({
               <Price
                 amount={price}
                 className={cn(
-                  'font-semibold tracking-tight text-foreground',
+                  'font-semibold tracking-tight',
+                  soldOut ? 'text-muted' : 'text-foreground',
                   compact ? 'text-sm' : 'text-base',
                 )}
               />
             ) : (
-              <span className="text-sm text-muted">Prix à venir</span>
+              <span className={cn('text-sm', soldOut ? 'text-muted' : 'text-foreground/70')}>
+                Prix à venir
+              </span>
             )}
 
             {lowStock ? (

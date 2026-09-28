@@ -5,19 +5,24 @@ import { Suspense } from 'react'
 
 import { AllProductsLink, CategoryItem } from './Categories.client'
 
+/** Single source of truth for the catalogue navigation — every category is listed. */
 async function CategoryList() {
   const payload = await getPayload({ config: configPromise })
 
   const categories = await payload.find({
     collection: 'categories',
     sort: 'title',
+    pagination: false,
+    limit: 200,
   })
 
   return (
-    <div>
-      <h3 className="text-xs mb-2 text-muted">Category</h3>
+    <nav aria-label="Catégories">
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        Catégories
+      </h2>
 
-      <ul>
+      <ul className="flex flex-col">
         <li>
           <AllProductsLink />
         </li>
@@ -29,7 +34,7 @@ async function CategoryList() {
           )
         })}
       </ul>
-    </div>
+    </nav>
   )
 }
 
@@ -41,7 +46,7 @@ export function Categories() {
   return (
     <Suspense
       fallback={
-        <div className="col-span-2 hidden h-[400px] w-full flex-none py-4 lg:block">
+        <div aria-hidden="true" className="w-full flex-none">
           <div className={clsx(skeleton, activeAndTitles)} />
           <div className={clsx(skeleton, activeAndTitles)} />
           <div className={clsx(skeleton, items)} />

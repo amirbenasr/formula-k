@@ -1,65 +1,208 @@
 'use client'
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/providers/Auth'
+import {
+  ArrowRight,
+  CakeSlice,
+  CalendarDays,
+  Camera,
+  Check,
+  Droplets,
+  Gem,
+  Gift,
+  Pencil,
+  Plane,
+  ShoppingBag,
+  Sparkles,
+  Sprout,
+  Star,
+  Tag,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
-const tiers = [
+/** Deterministic French thousands separator (non-breaking space), so server and client markup match. */
+const formatPoints = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')
+
+const referralPlaceholder = 'Code de parrainage (facultatif)'
+
+type Tier = {
+  name: string
+  icon: LucideIcon
+  minPoints: number
+  multiplier: string
+  chipClass: string
+  popular?: boolean
+  benefits: string[]
+}
+
+const tiers: Tier[] = [
   {
-    name: 'Starter',
-    icon: '🌱',
+    name: 'Éveil',
+    icon: Sprout,
     minPoints: 0,
-    multiplier: '1x',
-    color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    benefits: ['Earn 1 point per 1 TND spent', 'Access to rewards catalog', 'Birthday bonus'],
+    multiplier: 'x1',
+    chipClass: 'bg-primary/10 text-primary-ink',
+    benefits: [
+      '1 point par tranche de 1 TND dépensée',
+      'Accès au catalogue de récompenses',
+      'Cadeau d’anniversaire',
+    ],
   },
   {
-    name: 'Glowing',
-    icon: '✨',
+    name: 'Éclat',
+    icon: Sparkles,
     minPoints: 500,
-    multiplier: '1.25x',
-    color: 'bg-amber-100 text-amber-800 border-amber-200',
-    benefits: ['1.25x points on purchases', 'Birthday gift', 'Early access to sales'],
+    multiplier: 'x1,25',
+    chipClass: 'bg-accent/10 text-accent',
+    popular: true,
+    benefits: [
+      '1,25x points sur vos achats',
+      'Cadeau d’anniversaire offert',
+      'Accès anticipé aux soldes',
+    ],
   },
   {
-    name: 'Radiant',
-    icon: '💫',
+    name: 'Radieuse',
+    icon: Gem,
     minPoints: 1500,
-    multiplier: '1.5x',
-    color: 'bg-rose-100 text-rose-800 border-rose-200',
-    benefits: ['1.5x points on purchases', 'Free shipping on orders', 'Exclusive products'],
+    multiplier: 'x1,5',
+    chipClass: 'bg-primary/10 text-primary-ink',
+    benefits: ['1,5x points sur vos achats', 'Livraison offerte', 'Produits exclusifs'],
   },
   {
-    name: 'Glass Skin',
-    icon: '💎',
+    name: 'Peau de verre',
+    icon: Droplets,
     minPoints: 5000,
-    multiplier: '2x',
-    color: 'bg-violet-100 text-violet-800 border-violet-200',
-    benefits: ['2x points on purchases', 'VIP customer support', 'First access to new products', 'Exclusive gifts'],
+    multiplier: 'x2',
+    chipClass: 'bg-accent/10 text-accent',
+    benefits: [
+      '2x points sur vos achats',
+      'Service client VIP',
+      'Accès prioritaire aux nouveautés',
+      'Cadeaux exclusifs',
+    ],
   },
 ]
 
-const earnWays = [
-  { action: 'Create account', points: 100, icon: '🎁', frequency: 'Once' },
-  { action: 'Complete profile', points: 50, icon: '📝', frequency: 'Once' },
-  { action: 'Make a purchase', points: '1pt/TND', icon: '🛍️', frequency: 'Every order' },
-  { action: 'Write a review', points: 50, icon: '⭐', frequency: 'Per product' },
-  { action: 'Add photo to review', points: '+25', icon: '📸', frequency: 'Per review' },
-  { action: 'Refer a friend', points: 200, icon: '👯', frequency: 'Per referral' },
-  { action: 'Daily check-in', points: 5, icon: '📅', frequency: 'Daily' },
-  { action: 'Birthday bonus', points: 100, icon: '🎂', frequency: 'Yearly' },
+const earnWays: {
+  action: string
+  points: number | string
+  icon: LucideIcon
+  frequency: string
+  chipClass: string
+}[] = [
+  {
+    action: 'Créer un compte',
+    points: 100,
+    icon: Gift,
+    frequency: 'Une seule fois',
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  {
+    action: 'Compléter mon profil',
+    points: 50,
+    icon: Pencil,
+    frequency: 'Une seule fois',
+    chipClass: 'bg-accent/10 text-accent',
+  },
+  {
+    action: 'Passer une commande',
+    points: '1 pt / TND',
+    icon: ShoppingBag,
+    frequency: 'À chaque commande',
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  {
+    action: 'Laisser un avis',
+    points: 50,
+    icon: Star,
+    frequency: 'Par produit',
+    chipClass: 'bg-accent/10 text-accent',
+  },
+  {
+    action: 'Ajouter une photo à un avis',
+    points: 25,
+    icon: Camera,
+    frequency: 'Par avis',
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  {
+    action: 'Parrainer une amie',
+    points: 200,
+    icon: Users,
+    frequency: 'Par parrainage',
+    chipClass: 'bg-accent/10 text-accent',
+  },
+  {
+    action: 'Pointage quotidien',
+    points: 5,
+    icon: CalendarDays,
+    frequency: 'Chaque jour',
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  {
+    action: 'Cadeau d’anniversaire',
+    points: 100,
+    icon: CakeSlice,
+    frequency: 'Chaque année',
+    chipClass: 'bg-accent/10 text-accent',
+  },
 ]
 
-const sampleRewards = [
-  { name: 'Free Sample', points: 100, icon: '🧴' },
-  { name: '10 TND Off', points: 250, icon: '💰' },
-  { name: '25 TND Off', points: 500, icon: '💵' },
-  { name: 'Sheet Mask Set', points: 750, icon: '🎭' },
-  { name: 'Travel Size Product', points: 1000, icon: '✈️' },
-  { name: '50 TND Off', points: 2000, icon: '🎉' },
+const sampleRewards: { name: string; points: number; icon: LucideIcon; chipClass: string }[] = [
+  {
+    name: 'Échantillon offert',
+    points: 100,
+    icon: Sprout,
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  { name: '10 TND de remise', points: 250, icon: Tag, chipClass: 'bg-accent/10 text-accent' },
+  {
+    name: '25 TND de remise',
+    points: 500,
+    icon: Gift,
+    chipClass: 'bg-primary/10 text-primary-ink',
+  },
+  {
+    name: 'Coffret de masques',
+    points: 750,
+    icon: Droplets,
+    chipClass: 'bg-accent/10 text-accent',
+  },
+  { name: 'Format voyage', points: 1000, icon: Plane, chipClass: 'bg-primary/10 text-primary-ink' },
+  { name: '50 TND de remise', points: 2000, icon: Sparkles, chipClass: 'bg-accent/10 text-accent' },
+]
+
+const faqs = [
+  {
+    q: 'Comment rejoindre Glow Rewards ?',
+    a: 'Créez un compte ou connectez-vous, puis cliquez sur « Rejoindre » depuis cette page. Vous gagnez immédiatement 100 points de bienvenue.',
+  },
+  {
+    q: 'Mes points expirent-ils ?',
+    a: 'Les points expirent 12 mois après avoir été gagnés si votre compte reste inactif. Continuez à cumuler ou à échanger vos points pour les garder actifs.',
+  },
+  {
+    q: 'Comment passer au palier supérieur ?',
+    a: 'Votre palier dépend du total de points cumulés depuis votre inscription. Continuez à commander pour débloquer les paliers supérieurs, avec de meilleurs multiplicateurs et plus d’avantages.',
+  },
+  {
+    q: 'Puis-je cumuler mes récompenses avec d’autres promotions ?',
+    a: 'Oui, les remises de fidélité se cumulent avec la plupart des promotions et des soldes en cours.',
+  },
 ]
 
 export const RewardsLandingPage: React.FC = () => {
@@ -86,17 +229,17 @@ export const RewardsLandingPage: React.FC = () => {
       const data = await response.json()
 
       if (response.ok) {
-        toast.success(`Welcome to Glow Rewards! You earned ${data.points} bonus points!`)
+        toast.success(`Bienvenue dans Glow Rewards ! Vous gagnez ${data.points} points bonus.`)
         router.push('/account/rewards')
       } else {
         if (data.error === 'Already a rewards member') {
           router.push('/account/rewards')
         } else {
-          toast.error(data.error || 'Failed to join rewards program')
+          toast.error(data.error || 'Impossible de rejoindre le programme de fidélité.')
         }
       }
     } catch (_error) {
-      toast.error('An error occurred. Please try again.')
+      toast.error('Une erreur est survenue. Veuillez réessayer.')
     } finally {
       setIsJoining(false)
     }
@@ -104,217 +247,278 @@ export const RewardsLandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 bg-gradient-to-br from-rose-50 via-amber-50 to-violet-50 dark:from-rose-950/20 dark:via-amber-950/20 dark:to-violet-950/20">
-        <div className="container mx-auto text-center max-w-4xl">
-          <div className="inline-block mb-6 px-4 py-2 bg-white/80 dark:bg-white/10 rounded-full text-sm font-medium">
-            ✨ Introducing Glow Rewards ✨
-          </div>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold mb-6 bg-gradient-to-r from-rose-600 via-amber-600 to-violet-600 bg-clip-text text-transparent">
-            Your Journey to Glass Skin Starts Here
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join our rewards program and earn points with every purchase.
-            Unlock exclusive benefits, free products, and achieve your skincare goals.
-          </p>
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-primary/15 via-background to-accent/10">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center sm:gap-6">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-ink">
+              <Sparkles className="h-3.5 w-3.5" />
+              Découvrez Glow Rewards
+            </span>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <div className="flex gap-2">
-              <input
+            <h1 className="font-serif text-3xl font-medium leading-tight text-foreground sm:text-5xl">
+              Votre rituel vers une peau de verre commence ici
+            </h1>
+
+            <p className="max-w-2xl text-base text-muted sm:text-lg">
+              Rejoignez notre programme de fidélité et gagnez des points à chaque commande.
+              Débloquez des avantages exclusifs, des produits offerts et atteignez vos objectifs
+              beauté.
+            </p>
+
+            <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+              <Input
                 type="text"
-                placeholder="Referral code (optional)"
+                placeholder={referralPlaceholder}
+                aria-label={referralPlaceholder}
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                className="px-4 py-3 rounded-full border bg-white dark:bg-black/20 w-48"
+                className="w-full bg-card sm:w-72"
               />
               <Button
                 size="lg"
                 onClick={handleJoin}
                 disabled={isJoining}
-                className="rounded-full px-8"
+                className="w-full sm:w-auto"
               >
-                {isJoining ? 'Joining...' : user ? 'Join Now - Get 100 Points!' : 'Sign Up & Join'}
+                {isJoining
+                  ? 'Inscription…'
+                  : user
+                    ? 'Rejoindre et gagner 100 points'
+                    : 'S’inscrire et rejoindre'}
               </Button>
             </div>
-          </div>
 
-          {user?.rewardsEnabled && (
-            <div className="mt-6">
-              <Button variant="outline" asChild className="rounded-full">
-                <Link href="/account/rewards">Go to My Rewards →</Link>
+            {user?.rewardsEnabled && (
+              <Button variant="ghost" asChild>
+                <Link href="/account/rewards">
+                  Voir mes points
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Tiers Section */}
-      <section className="py-16 px-4 bg-white dark:bg-black/20">
-        <div className="container mx-auto max-w-6xl">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-center mb-4">
-            Climb the Glow Ladder
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            The more you shop, the higher you climb. Each tier unlocks exclusive benefits
-            on your journey to glass skin perfection.
-          </p>
+      {/* Paliers */}
+      <section className="bg-card">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-3 text-center sm:mb-10">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Paliers de fidélité
+            </span>
+            <h2 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+              Grimpez les paliers Glow
+            </h2>
+            <p className="text-sm text-muted sm:text-base">
+              Plus vous commandez, plus vous montez. Chaque palier débloque des avantages exclusifs
+              sur la route d’une peau de verre.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {tiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`relative p-6 rounded-2xl border-2 ${tier.color} transition-transform hover:scale-105`}
-              >
-                <div className="text-4xl mb-3">{tier.icon}</div>
-                <h3 className="text-xl font-bold mb-1">{tier.name}</h3>
-                <p className="text-sm opacity-75 mb-3">
-                  {tier.minPoints === 0 ? 'Starting tier' : `${tier.minPoints.toLocaleString()} points`}
-                </p>
-                <div className="inline-block px-3 py-1 bg-white/50 rounded-full text-sm font-semibold mb-4">
-                  {tier.multiplier} Points
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {tiers.map((tier) => {
+              const Icon = tier.icon
+              return (
+                <div
+                  key={tier.name}
+                  className={`surface surface-pad flex flex-col gap-4 ${
+                    tier.popular ? 'border-primary ring-1 ring-primary/20' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tier.chipClass}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    {tier.popular ? (
+                      <span className="badge bg-primary text-primary-foreground">
+                        Le plus populaire
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <h3 className="font-serif text-xl font-medium text-foreground">{tier.name}</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {tier.minPoints === 0
+                        ? 'Palier de départ'
+                        : `${formatPoints(tier.minPoints)} points`}
+                    </p>
+                  </div>
+
+                  <span className="badge w-fit bg-secondary/40 text-foreground">
+                    Points {tier.multiplier}
+                  </span>
+
+                  <ul className="flex flex-col gap-2">
+                    {tier.benefits.map((benefit) => (
+                      <li key={benefit} className="flex items-start gap-2 text-sm text-muted">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                        {benefit}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-2">
-                  {tier.benefits.map((benefit, i) => (
-                    <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="text-green-600">✓</span>
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* Ways to Earn Section */}
-      <section className="py-16 px-4 bg-gradient-to-b from-white to-rose-50 dark:from-black/20 dark:to-rose-950/10">
-        <div className="container mx-auto max-w-5xl">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-center mb-4">
-            Ways to Earn Points
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Points add up quickly! Here&apos;s how you can earn your way to amazing rewards.
-          </p>
+      {/* Façons de gagner */}
+      <section className="bg-secondary/40">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-3 text-center sm:mb-10">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Cumuler des points
+            </span>
+            <h2 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+              Façons de gagner des points
+            </h2>
+            <p className="text-sm text-muted sm:text-base">
+              Les points s’accumulent vite. Voici comment atteindre vos récompenses préférées.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {earnWays.map((way) => (
-              <div
-                key={way.action}
-                className="p-5 bg-white dark:bg-black/40 rounded-xl border shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="text-3xl mb-3">{way.icon}</div>
-                <h3 className="font-semibold mb-1">{way.action}</h3>
-                <p className="text-2xl font-bold text-primary mb-1">
-                  {typeof way.points === 'number' ? `+${way.points}` : way.points}
-                </p>
-                <p className="text-xs text-muted-foreground">{way.frequency}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            {earnWays.map((way) => {
+              const Icon = way.icon
+              return (
+                <div
+                  key={way.action}
+                  className="surface surface-pad flex flex-col items-start gap-3"
+                >
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${way.chipClass}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-medium text-foreground">{way.action}</h3>
+                  <p className="text-2xl font-semibold text-primary-ink">
+                    {typeof way.points === 'number' ? `+${way.points}` : way.points}
+                  </p>
+                  <p className="text-xs text-muted">{way.frequency}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* Rewards Catalog Preview */}
-      <section className="py-16 px-4 bg-white dark:bg-black/20">
-        <div className="container mx-auto max-w-5xl">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-center mb-4">
-            Redeem Your Points
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Turn your points into amazing skincare rewards.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {sampleRewards.map((reward) => (
-              <div
-                key={reward.name}
-                className="p-4 bg-gradient-to-br from-amber-50 to-rose-50 dark:from-amber-950/20 dark:to-rose-950/20 rounded-xl text-center border hover:border-primary transition-colors"
-              >
-                <div className="text-3xl mb-2">{reward.icon}</div>
-                <h3 className="font-medium text-sm mb-1">{reward.name}</h3>
-                <p className="text-xs text-muted-foreground">{reward.points} pts</p>
-              </div>
-            ))}
+      {/* Catalogue */}
+      <section className="bg-card">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto mb-8 flex max-w-2xl flex-col items-center gap-3 text-center sm:mb-10">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Catalogue de récompenses
+            </span>
+            <h2 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+              Échangez vos points
+            </h2>
+            <p className="text-sm text-muted sm:text-base">
+              Transformez vos points en récompenses beauté, sans minimum de commande.
+            </p>
           </div>
 
-          <div className="text-center mt-8">
-            <Button variant="outline" onClick={handleJoin} className="rounded-full">
-              {user ? 'Join to See All Rewards' : 'Sign Up to Unlock Rewards'}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
+            {sampleRewards.map((reward) => {
+              const Icon = reward.icon
+              return (
+                <div
+                  key={reward.name}
+                  className="surface surface-pad flex flex-col items-center gap-3 text-center"
+                >
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${reward.chipClass}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-sm font-medium text-foreground">{reward.name}</h3>
+                  <p className="text-xs text-muted">{formatPoints(reward.points)} pts</p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <Button onClick={handleJoin} className="w-full sm:w-auto">
+              {user ? 'Voir toutes les récompenses' : 'S’inscrire pour tout débloquer'}
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Referral Section */}
-      <section className="py-16 px-4 bg-gradient-to-r from-violet-100 to-rose-100 dark:from-violet-950/30 dark:to-rose-950/30">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="text-5xl mb-4">👯‍♀️</div>
-          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-            Share the Glow
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Invite your friends to join Glow Rewards. When they make their first purchase,
-            you&apos;ll both earn <span className="font-bold text-primary">200 bonus points</span>!
-          </p>
-          <Button size="lg" onClick={handleJoin} className="rounded-full px-8">
-            {user ? 'Get Your Referral Code' : 'Join & Start Referring'}
-          </Button>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="py-16 px-4 bg-white dark:bg-black/20">
-        <div className="container mx-auto max-w-3xl">
-          <h2 className="text-3xl font-serif font-bold text-center mb-12">
-            Frequently Asked Questions
-          </h2>
-
-          <div className="space-y-6">
-            {[
-              {
-                q: 'How do I join Glow Rewards?',
-                a: 'Simply create an account or log in, then click "Join Now" on this page. You\'ll instantly earn 100 welcome points!',
-              },
-              {
-                q: 'Do my points expire?',
-                a: 'Points expire 12 months after they are earned if there is no account activity. Keep earning or redeeming to keep your points active!',
-              },
-              {
-                q: 'How do I move up tiers?',
-                a: 'Your tier is based on lifetime points earned. Keep shopping and earning to unlock higher tiers with better multipliers and benefits.',
-              },
-              {
-                q: 'Can I use rewards with other promotions?',
-                a: 'Yes! Rewards discounts can be combined with most other promotions and sales.',
-              },
-            ].map((faq) => (
-              <div key={faq.q} className="p-6 bg-gray-50 dark:bg-white/5 rounded-xl">
-                <h3 className="font-semibold mb-2">{faq.q}</h3>
-                <p className="text-muted-foreground">{faq.a}</p>
-              </div>
-            ))}
+      {/* Parrainage */}
+      <section className="bg-accent/10">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center sm:gap-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card text-accent">
+              <Users className="h-6 w-6" />
+            </div>
+            <h2 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+              Partagez votre éclat
+            </h2>
+            <p className="text-sm text-muted sm:text-base">
+              Invitez vos amies à rejoindre Glow Rewards. Dès leur première commande, vous recevez
+              chacune <span className="font-semibold text-primary-ink">200 points bonus</span>.
+            </p>
+            <Button size="lg" onClick={handleJoin} className="w-full sm:w-auto">
+              {user ? 'Obtenir mon code de parrainage' : 'Rejoindre et parrainer'}
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-rose-500 to-violet-600 text-white">
-        <div className="container mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-            Start Your Glow Journey Today
-          </h2>
-          <p className="text-white/80 mb-8 text-lg">
-            Join thousands of skincare enthusiasts earning rewards on their path to glass skin.
-          </p>
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={handleJoin}
-            className="rounded-full px-10 text-lg"
-          >
-            {user ? 'Join Glow Rewards' : 'Create Account & Join'}
-          </Button>
+      {/* FAQ */}
+      <section className="bg-card">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="mb-6 text-center font-serif text-2xl font-medium text-foreground sm:mb-8 sm:text-3xl">
+              Questions fréquentes
+            </h2>
+
+            <Accordion type="single" collapsible className="surface surface-pad">
+              {faqs.map((faq) => (
+                <AccordionItem key={faq.q} value={faq.q}>
+                  <AccordionTrigger className="text-base font-medium text-foreground">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted sm:text-base">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="bg-primary/10">
+        <div className="container py-10 sm:py-14">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center sm:gap-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card text-primary-ink">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <h2 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+              Commencez votre rituel Glow aujourd’hui
+            </h2>
+            <p className="text-sm text-muted sm:text-base">
+              Rejoignez des milliers de passionnées de beauté qui cumulent des points sur la route
+              d’une peau de verre.
+            </p>
+            <Button
+              size="lg"
+              onClick={handleJoin}
+              disabled={isJoining}
+              className="w-full sm:w-auto"
+            >
+              {user ? 'Rejoindre Glow Rewards' : 'Créer un compte et rejoindre'}
+            </Button>
+          </div>
         </div>
       </section>
     </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { AuthShell } from '@/components/auth/AuthShell'
 import { FormError } from '@/components/forms/FormError'
 import { FormItem } from '@/components/forms/FormItem'
 import { Message } from '@/components/Message'
@@ -7,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/providers/Auth'
+import { ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import React, { Fragment, useCallback, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import React, { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 type FormData = {
@@ -20,7 +22,6 @@ type FormData = {
 export const ResetPasswordForm: React.FC = () => {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
-  const router = useRouter()
   const { resetPassword } = useAuth()
 
   const [error, setError] = useState('')
@@ -38,7 +39,7 @@ export const ResetPasswordForm: React.FC = () => {
   const onSubmit = useCallback(
     async (data: FormData) => {
       if (!token) {
-        setError('Missing reset token. Please request a new password reset link.')
+        setError('Lien de réinitialisation manquant. Demandez-en un nouveau.')
         return
       }
 
@@ -50,9 +51,9 @@ export const ResetPasswordForm: React.FC = () => {
         })
         setSuccess(true)
         setError('')
-      } catch (e) {
+      } catch {
         setError(
-          'There was a problem resetting your password. The link may have expired. Please try requesting a new one.',
+          'La réinitialisation a échoué. Le lien a peut-être expiré : demandez-en un nouveau.',
         )
       }
     },
@@ -61,79 +62,76 @@ export const ResetPasswordForm: React.FC = () => {
 
   if (!token) {
     return (
-      <Fragment>
-        <h1 className="text-xl mb-4">Invalid Reset Link</h1>
-        <div className="prose dark:prose-invert">
-          <p>
-            This password reset link is invalid or has expired. Please{' '}
-            <Link href="/forgot-password">request a new password reset</Link>.
-          </p>
-        </div>
-      </Fragment>
+      <AuthShell
+        description="Ce lien de réinitialisation est invalide ou a expiré."
+        icon={ShieldCheck}
+        title="Lien invalide"
+      >
+        <Button asChild className="w-full" size="lg">
+          <Link href="/forgot-password">Demander un nouveau lien</Link>
+        </Button>
+      </AuthShell>
+    )
+  }
+
+  if (success) {
+    return (
+      <AuthShell
+        description="Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter."
+        icon={ShieldCheck}
+        title="Mot de passe modifié"
+      >
+        <Button asChild className="w-full" size="lg">
+          <Link href="/login">Se connecter</Link>
+        </Button>
+      </AuthShell>
     )
   }
 
   return (
-    <Fragment>
-      {!success && (
-        <Fragment>
-          <h1 className="text-xl mb-4">Reset Your Password</h1>
-          <div className="prose dark:prose-invert mb-8">
-            <p>Enter your new password below.</p>
-          </div>
-          <form className="max-w-lg" onSubmit={handleSubmit(onSubmit)}>
-            <Message className="mb-8" error={error} />
+    <AuthShell
+      description="Choisissez un nouveau mot de passe pour votre compte."
+      icon={ShieldCheck}
+      title="Nouveau mot de passe"
+    >
+      <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+        <Message error={error} />
 
-            <FormItem className="mb-8">
-              <Label htmlFor="password" className="mb-2">
-                New Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password', {
-                  required: 'Please enter a new password.',
-                  minLength: {
-                    value: 8,
-                    message: 'Password must be at least 8 characters.',
-                  },
-                })}
-              />
-              {errors.password && <FormError message={errors.password.message} />}
-            </FormItem>
+        <FormItem>
+          <Label htmlFor="password">Nouveau mot de passe</Label>
+          <Input
+            autoComplete="new-password"
+            id="password"
+            type="password"
+            {...register('password', {
+              required: 'Veuillez saisir un nouveau mot de passe.',
+              minLength: {
+                value: 8,
+                message: 'Le mot de passe doit contenir au moins 8 caractères.',
+              },
+            })}
+          />
+          {errors.password ? <FormError message={errors.password.message} /> : null}
+        </FormItem>
 
-            <FormItem className="mb-8">
-              <Label htmlFor="passwordConfirm" className="mb-2">
-                Confirm New Password
-              </Label>
-              <Input
-                id="passwordConfirm"
-                type="password"
-                {...register('passwordConfirm', {
-                  required: 'Please confirm your password.',
-                  validate: (value) => value === password || 'Passwords do not match.',
-                })}
-              />
-              {errors.passwordConfirm && <FormError message={errors.passwordConfirm.message} />}
-            </FormItem>
+        <FormItem>
+          <Label htmlFor="passwordConfirm">Confirmer le nouveau mot de passe</Label>
+          <Input
+            autoComplete="new-password"
+            id="passwordConfirm"
+            type="password"
+            {...register('passwordConfirm', {
+              required: 'Veuillez confirmer votre mot de passe.',
+              validate: (value) => value === password || 'Les mots de passe ne correspondent pas.',
+            })}
+          />
+          {errors.passwordConfirm ? <FormError message={errors.passwordConfirm.message} /> : null}
+        </FormItem>
 
-            <Button type="submit" variant="default" disabled={isSubmitting}>
-              {isSubmitting ? 'Resetting...' : 'Reset Password'}
-            </Button>
-          </form>
-        </Fragment>
-      )}
-      {success && (
-        <Fragment>
-          <h1 className="text-xl mb-4">Password Reset Successfully</h1>
-          <div className="prose dark:prose-invert mb-8">
-            <p>Your password has been reset. You can now log in with your new password.</p>
-          </div>
-          <Button asChild variant="default">
-            <Link href="/login">Go to Login</Link>
-          </Button>
-        </Fragment>
-      )}
-    </Fragment>
+        <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
+          {isSubmitting ? 'Enregistrement…' : 'Enregistrer le mot de passe'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }

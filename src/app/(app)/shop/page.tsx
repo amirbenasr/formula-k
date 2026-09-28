@@ -1,14 +1,20 @@
-import { Grid } from '@/components/Grid'
 import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
+import { ProductPagination } from '@/components/ProductCard/Pagination'
+import { ProductGrid } from '@/components/ProductCard/ProductGrid'
 import { searchProductCatalog } from '@/utilities/storefront'
 import configPromise from '@payload-config'
+import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import React from 'react'
 
-export const metadata = {
-  description: 'Search for products in the store.',
-  title: 'Shop',
+export const metadata: Metadata = {
+  description:
+    'Tous les soins coréens Formula K : sérums, crèmes, nettoyants, essences, solaires. Livraison 24-48h partout en Tunisie, paiement à la livraison.',
+  title: 'Tous les produits | Formula K',
 }
+
+/** Products per page — three full rows of the 4-column grid. */
+const PAGE_SIZE = 12
 
 type SearchParams = { [key: string]: string | string[] | undefined }
 
@@ -16,14 +22,28 @@ type Props = {
   searchParams: Promise<SearchParams>
 }
 
+/** Search params can repeat; the storefront only ever uses the first value. */
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
+}
+
 export default async function ShopPage({ searchParams }: Props) {
-  const { q: searchValue, sort, category } = await searchParams
+  const params = await searchParams
+  const searchValue = first(params.q)
+  const sort = first(params.sort)
+  const category = first(params.category)
+
+  const requestedPage = Number.parseInt(first(params.page) ?? '1', 10)
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
+
   const payload = await getPayload({ config: configPromise })
 
   const products = await payload.find({
     collection: 'products',
     draft: false,
     overrideAccess: false,
+    limit: PAGE_SIZE,
+    page,
     select: {
       title: true,
       slug: true,
@@ -81,19 +101,18 @@ export default async function ShopPage({ searchParams }: Props) {
       : {}),
   })
 
+  let docs = products.docs as ProductCardProduct[]
+  let totalDocs = products.totalDocs
+  let currentPage = page
+
   // `like` in Postgres is accent-sensitive, so "creme" never matched "Crème".
   // Fall back to the normalised catalogue search when the SQL query finds nothing.
-  let docs = products.docs as ProductCardProduct[]
+  if (searchValue && products.docs.length === 0 && page === 1) {
+    const fallback = await searchProductCatalog(payload, searchValue, 60)
 
-  const searchQuery = Array.isArray(searchValue) ? searchValue[0] : searchValue
-
-  if (searchQuery && docs.length === 0) {
-    const fallback = await searchProductCatalog(payload, searchQuery, 60)
-    const sortBy = Array.isArray(sort) ? sort[0] : sort
-
-    if (sortBy) {
-      const direction = sortBy.startsWith('-') ? -1 : 1
-      const field = sortBy.replace(/^-/, '')
+    if (sort) {
+      const direction = sort.startsWith('-') ? -1 : 1
+      const field = sort.replace(/^-/, '')
 
       fallback.sort((a, b) => {
         if (field === 'priceInUSD') return ((a.priceInUSD ?? 0) - (b.priceInUSD ?? 0)) * direction
@@ -106,35 +125,67 @@ export default async function ShopPage({ searchParams }: Props) {
       })
     }
 
-    docs = fallback
+    totalDocs = fallback.length
+    docs = fallback.slice(0, PAGE_SIZE)
+    currentPage = 1
   }
 
-  const resultsText = docs.length > 1 ? 'resultats' : 'resultat'
+  const totalPages = Math.max(1, Math.ceil(totalDocs / PAGE_SIZE))
+  const countLabel = `${totalDocs} ${totalDocs > 1 ? 'produits' : 'produit'}`
+
+  const buildPageHref = (target: number) => {
+    const next = new URLSearchParams()
+
+    if (searchValue) next.set('q', searchValue)
+    if (sort) next.set('sort', sort)
+    if (category) next.set('category', category)
+    if (target > 1) next.set('page', String(target))
+
+    const query = next.toString()
+
+    return query ? `/shop?${query}` : '/shop'
+  }
 
   return (
     <div>
-      {searchValue ? (
-        <p className="mb-4 text-sm text-muted">
-          {docs.length === 0
-            ? 'Aucun produit ne correspond à '
-            : `${docs.length} ${resultsText} pour `}
-          <span className="font-semibold text-foreground">&quot;{searchValue}&quot;</span>
+      <header className="mb-6">
+        <h1 className="font-serif text-2xl font-medium text-foreground sm:text-3xl">
+          Tous les produits
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          {searchValue ? `${countLabel} pour « ${searchValue} »` : countLabel}
         </p>
-      ) : null}
+      </header>
 
-      {!searchValue && docs.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border bg-card/60 p-10 text-center">
-          <p className="text-muted">Aucun produit disponible pour le moment.</p>
+      {totalDocs === 0 ? (
+        <div className="surface surface-pad border-dashed text-center">
+          <p className="text-muted">
+            {searchValue
+              ? 'Aucun produit ne correspond à cette recherche.'
+              : 'Aucun produit disponible pour le moment.'}
+          </p>
         </div>
-      )}
+      ) : (
+        <>
+          <ProductGrid>
+            {docs.map((product) => {
+              return (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  imageSizes="(min-width: 1024px) 22vw, 45vw"
+                />
+              )
+            })}
+          </ProductGrid>
 
-      {docs.length > 0 ? (
-        <Grid className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {docs.map((product) => {
-            return <ProductCard key={product.id} product={product} imageSizes="(min-width: 1024px) 23vw, 45vw" />
-          })}
-        </Grid>
-      ) : null}
+          <ProductPagination
+            hrefForPage={buildPageHref}
+            page={currentPage}
+            totalPages={totalPages}
+          />
+        </>
+      )}
     </div>
   )
 }

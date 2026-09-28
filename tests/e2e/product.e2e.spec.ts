@@ -8,8 +8,8 @@ test.describe('Product Detail Page', () => {
     await expect(title).toBeVisible({ timeout: 10000 })
     await expect(title).toContainText('Test Product')
 
-    // Add to cart button (uses aria-label)
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    // Add to cart button (aria-label is French)
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 10000 })
   })
 
@@ -26,19 +26,19 @@ test.describe('Product Detail Page', () => {
   test('add to cart shows success toast', async ({ page }) => {
     await page.goto('/products/test-product')
 
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 10000 })
     await addToCart.click()
 
     // Should show toast (text may include trailing period)
-    const toast = page.getByText(/Item added to cart/)
+    const toast = page.getByText('Ajouté au panier')
     await expect(toast).toBeVisible({ timeout: 10000 })
   })
 
   test('out of stock product has disabled add to cart', async ({ page }) => {
     await page.goto('/products/out-of-stock-product')
 
-    const addToCart = page.locator('button[aria-label="Add to cart"]')
+    const addToCart = page.locator('button[aria-label="Ajouter au panier"]')
     await expect(addToCart).toBeVisible({ timeout: 10000 })
     await expect(addToCart).toBeDisabled()
   })

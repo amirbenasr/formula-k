@@ -26,7 +26,7 @@ export const SplitHero: React.FC<SplitHeroProps> = ({ links, media, richText, ba
           {/* Left Content */}
           <div className="flex flex-col justify-center order-2 lg:order-1">
             {badge && (
-              <span className="inline-flex self-start px-4 py-1.5 rounded-pill bg-primary/20 text-primary-700 text-sm font-medium mb-6">
+              <span className="inline-flex self-start px-4 py-1.5 rounded-full bg-primary/20 text-primary-ink text-sm font-medium mb-6">
                 {badge}
               </span>
             )}
@@ -47,11 +47,7 @@ export const SplitHero: React.FC<SplitHeroProps> = ({ links, media, richText, ba
                       key={i}
                       {...link}
                       appearance={i === 0 ? 'default' : 'outline'}
-                      className={
-                        i === 0
-                          ? 'btn-primary'
-                          : 'btn-outline'
-                      }
+                      size="lg"
                     />
                   )
                 })}
@@ -63,12 +59,7 @@ export const SplitHero: React.FC<SplitHeroProps> = ({ links, media, richText, ba
           <div className="relative order-1 lg:order-2 flex justify-center lg:justify-end">
             {media && typeof media === 'object' && (
               <div className="relative w-full max-w-md lg:max-w-lg xl:max-w-xl aspect-[4/5] rounded-[2rem] overflow-hidden shadow-hover">
-                <Media
-                  fill
-                  imgClassName="object-cover"
-                  priority
-                  resource={media}
-                />
+                <Media fill imgClassName="object-cover" priority resource={media} />
               </div>
             )}
           </div>

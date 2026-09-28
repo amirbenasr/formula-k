@@ -10,11 +10,11 @@ export default function RewardsPage() {
 }
 
 export const metadata: Metadata = {
-  title: 'Glow Rewards - Earn Points & Unlock Benefits',
+  title: 'Glow Rewards – Cumulez des points et débloquez des avantages',
   description:
-    'Join our rewards program and earn points with every purchase. Unlock exclusive benefits, free products, and achieve your skincare goals.',
+    'Rejoignez notre programme de fidélité et gagnez des points à chaque commande. Débloquez des avantages exclusifs, des produits offerts et atteignez vos objectifs beauté.',
   openGraph: mergeOpenGraph({
-    title: 'Glow Rewards - Earn Points & Unlock Benefits',
+    title: 'Glow Rewards – Cumulez des points et débloquez des avantages',
     url: '/rewards',
   }),
 }

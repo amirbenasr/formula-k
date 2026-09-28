@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import React, { Fragment, useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 type FormData = {
@@ -34,122 +34,109 @@ export const CreateAccountForm: React.FC = () => {
   const password = useRef({})
   password.current = watch('password', '')
 
-  const onSubmit = useCallback(
-    async (data: FormData) => {
-      setLoading(true)
-      setError(null)
+  const onSubmit = useCallback(async (data: FormData) => {
+    setLoading(true)
+    setError(null)
 
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users`, {
-          body: JSON.stringify(data),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-        })
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/users`, {
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      })
 
-        if (!response.ok) {
-          const result = await response.json()
-          const message =
-            result?.errors?.[0]?.message ||
-            response.statusText ||
-            'There was an error creating the account.'
-          setError(message)
-          return
-        }
-
-        setSuccess(true)
-      } catch (_) {
-        setError('There was an error creating your account. Please try again.')
-      } finally {
-        setLoading(false)
+      if (!response.ok) {
+        const result = await response.json()
+        const message =
+          result?.errors?.[0]?.message ||
+          response.statusText ||
+          'Une erreur est survenue lors de la création du compte.'
+        setError(message)
+        return
       }
-    },
-    [],
-  )
+
+      setSuccess(true)
+    } catch (_) {
+      setError('Une erreur est survenue lors de la création du compte. Merci de réessayer.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   if (success) {
     return (
-      <Fragment>
-        <h2 className="text-xl mb-4">Check Your Email</h2>
-        <div className="prose dark:prose-invert mb-8">
-          <p>
-            Your account has been created successfully! We&apos;ve sent a verification email to your
-            inbox. Please click the link in the email to verify your account.
-          </p>
-          <p>
-            Once verified, you can{' '}
-            <Link href={`/login${allParams}`}>login to your account</Link>.
-          </p>
-        </div>
-      </Fragment>
+      <div className="flex flex-col gap-4">
+        <h2 className="font-serif text-xl font-medium text-foreground">Vérifiez votre e-mail</h2>
+        <p className="text-sm text-muted">
+          Votre compte a bien été créé. Nous vous avons envoyé un e-mail de vérification : cliquez
+          sur le lien qu’il contient pour activer votre compte.
+        </p>
+        <p className="text-sm text-muted">
+          Une fois votre adresse vérifiée, vous pourrez{' '}
+          <Link
+            className="font-medium text-primary-ink underline-offset-4 hover:underline"
+            href={`/login${allParams}`}
+          >
+            vous connecter
+          </Link>
+          .
+        </p>
+      </div>
     )
   }
 
   return (
-    <form className="max-w-lg py-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="prose dark:prose-invert mb-6">
-        <p>Create an account to start shopping and track your orders.</p>
-      </div>
-
+    <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
       <Message error={error} />
 
-      <div className="flex flex-col gap-8 mb-8">
-        <FormItem>
-          <Label htmlFor="email" className="mb-2">
-            Email Address
-          </Label>
-          <Input
-            id="email"
-            {...register('email', { required: 'Email is required.' })}
-            type="email"
-          />
-          {errors.email && <FormError message={errors.email.message} />}
-        </FormItem>
+      <FormItem>
+        <Label htmlFor="email">Adresse e-mail</Label>
+        <Input
+          autoComplete="email"
+          id="email"
+          type="email"
+          {...register('email', { required: 'Veuillez indiquer votre adresse e-mail.' })}
+        />
+        {errors.email ? <FormError message={errors.email.message} /> : null}
+      </FormItem>
 
-        <FormItem>
-          <Label htmlFor="password" className="mb-2">
-            Password
-          </Label>
-          <Input
-            id="password"
-            {...register('password', {
-              required: 'Password is required.',
-              minLength: {
-                value: 8,
-                message: 'Password must be at least 8 characters.',
-              },
-            })}
-            type="password"
-          />
-          {errors.password && <FormError message={errors.password.message} />}
-        </FormItem>
+      <FormItem>
+        <Label htmlFor="password">Mot de passe</Label>
+        <Input
+          autoComplete="new-password"
+          id="password"
+          type="password"
+          {...register('password', {
+            required: 'Veuillez choisir un mot de passe.',
+            minLength: {
+              value: 8,
+              message: 'Le mot de passe doit contenir au moins 8 caractères.',
+            },
+          })}
+        />
+        {errors.password ? <FormError message={errors.password.message} /> : null}
+      </FormItem>
 
-        <FormItem>
-          <Label htmlFor="passwordConfirm" className="mb-2">
-            Confirm Password
-          </Label>
-          <Input
-            id="passwordConfirm"
-            {...register('passwordConfirm', {
-              required: 'Please confirm your password.',
-              validate: (value) => value === password.current || 'The passwords do not match',
-            })}
-            type="password"
-          />
-          {errors.passwordConfirm && <FormError message={errors.passwordConfirm.message} />}
-        </FormItem>
-      </div>
-      <Button disabled={loading} type="submit" variant="default">
-        {loading ? 'Creating Account...' : 'Create Account'}
+      <FormItem>
+        <Label htmlFor="passwordConfirm">Confirmer le mot de passe</Label>
+        <Input
+          autoComplete="new-password"
+          id="passwordConfirm"
+          type="password"
+          {...register('passwordConfirm', {
+            required: 'Veuillez confirmer votre mot de passe.',
+            validate: (value) =>
+              value === password.current || 'Les mots de passe ne correspondent pas.',
+          })}
+        />
+        {errors.passwordConfirm ? <FormError message={errors.passwordConfirm.message} /> : null}
+      </FormItem>
+
+      <Button className="w-full" disabled={loading} size="lg" type="submit">
+        {loading ? 'Création du compte…' : 'Créer mon compte'}
       </Button>
-
-      <div className="prose dark:prose-invert mt-8">
-        <p>
-          {'Already have an account? '}
-          <Link href={`/login${allParams}`}>Login</Link>
-        </p>
-      </div>
     </form>
   )
 }

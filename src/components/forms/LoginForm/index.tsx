@@ -38,54 +38,49 @@ export const LoginForm: React.FC = () => {
         if (redirect?.current) router.push(redirect.current)
         else router.push('/account')
       } catch (_) {
-        setError('There was an error with the credentials provided. Please try again.')
+        setError('E-mail ou mot de passe incorrect. Merci de réessayer.')
       }
     },
     [login, router],
   )
 
   return (
-    <form className="" onSubmit={handleSubmit(onSubmit)}>
-      <Message className="classes.message" error={error} />
-      <div className="flex flex-col gap-8">
-        <FormItem>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            {...register('email', { required: 'Email is required.' })}
-          />
-          {errors.email && <FormError message={errors.email.message} />}
-        </FormItem>
+    <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+      <Message error={error} />
 
-        <FormItem>
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            {...register('password', { required: 'Please provide a password.' })}
-          />
-          {errors.password && <FormError message={errors.password.message} />}
-        </FormItem>
+      <FormItem>
+        <Label htmlFor="email">Adresse e-mail</Label>
+        <Input
+          autoComplete="email"
+          id="email"
+          type="email"
+          {...register('email', { required: 'Veuillez indiquer votre adresse e-mail.' })}
+        />
+        {errors.email ? <FormError message={errors.email.message} /> : null}
+      </FormItem>
 
-        <div className="text-primary/70 mb-6 prose prose-a:hover:text-primary dark:prose-invert">
-          <p>
-            Forgot your password?{' '}
-            <Link href={`/forgot-password${allParams}`}>Click here to reset it</Link>
-          </p>
-        </div>
-      </div>
-
-      <div className="flex gap-4 justify-between">
-        <Button asChild variant="outline" size="lg">
-          <Link href={`/create-account${allParams}`} className="grow max-w-[50%]">
-            Create an account
+      <FormItem>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="password">Mot de passe</Label>
+          <Link
+            className="inline-flex min-h-6 items-center text-xs font-medium text-primary-ink underline-offset-4 hover:underline"
+            href={`/forgot-password${allParams}`}
+          >
+            Mot de passe oublié ?
           </Link>
-        </Button>
-        <Button className="grow" disabled={isLoading} size="lg" type="submit" variant="default">
-          {isLoading ? 'Processing' : 'Continue'}
-        </Button>
-      </div>
+        </div>
+        <Input
+          autoComplete="current-password"
+          id="password"
+          type="password"
+          {...register('password', { required: 'Veuillez indiquer votre mot de passe.' })}
+        />
+        {errors.password ? <FormError message={errors.password.message} /> : null}
+      </FormItem>
+
+      <Button className="w-full" disabled={isLoading} size="lg" type="submit">
+        {isLoading ? 'Connexion…' : 'Se connecter'}
+      </Button>
     </form>
   )
 }

@@ -1,13 +1,16 @@
-import type { Order } from '@/payload-types'
 import type { Metadata } from 'next'
 
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-
 import { OrderItem } from '@/components/OrderItem'
-import { headers as getHeaders } from 'next/headers'
+import { Button } from '@/components/ui/button'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import configPromise from '@payload-config'
-import { getPayload } from 'payload'
+import { headers as getHeaders } from 'next/headers'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
+import React from 'react'
+
+import type { Order } from '@/payload-types'
 
 export default async function Orders() {
   const headers = await getHeaders()
@@ -17,7 +20,7 @@ export default async function Orders() {
   let orders: Order[] | null = null
 
   if (!user) {
-    redirect(`/login?warning=${encodeURIComponent('Please login to access your orders.')}`)
+    redirect(`/login?warning=${encodeURIComponent('Connectez-vous pour voir vos commandes.')}`)
   }
 
   try {
@@ -35,35 +38,45 @@ export default async function Orders() {
     })
 
     orders = ordersResult?.docs || []
-  } catch (error) {}
+  } catch {
+    // Building before the database is reachable must not break the page.
+  }
+
+  const hasOrders = Boolean(orders && orders.length > 0)
 
   return (
-    <>
-      <div className="border p-8 rounded-lg bg-primary-foreground w-full">
-        <h1 className="text-3xl font-medium mb-8">Orders</h1>
-        {(!orders || !Array.isArray(orders) || orders?.length === 0) && (
-          <p className="">You have no orders.</p>
-        )}
+    <section className="surface surface-pad">
+      <h1 className="mb-6 font-serif text-2xl font-medium text-foreground sm:text-3xl">
+        Mes commandes
+      </h1>
 
-        {orders && orders.length > 0 && (
-          <ul className="flex flex-col gap-6">
-            {orders?.map((order, index) => (
-              <li key={order.id}>
-                <OrderItem order={order} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </>
+      {!hasOrders ? (
+        <div className="flex flex-col items-start gap-4">
+          <p className="text-sm text-muted">
+            Aucune commande pour le moment. Vos commandes apparaîtront ici dès votre premier achat.
+          </p>
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/shop">Découvrir la boutique</Link>
+          </Button>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          {orders?.map((order) => (
+            <li className="rounded-xl border border-border p-4" key={order.id}>
+              <OrderItem order={order} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Your orders.',
+  description: 'Historique de vos commandes Formula K.',
   openGraph: mergeOpenGraph({
-    title: 'Orders',
+    title: 'Mes commandes',
     url: '/orders',
   }),
-  title: 'Orders',
+  title: 'Mes commandes',
 }

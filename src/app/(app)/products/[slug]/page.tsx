@@ -11,7 +11,6 @@ import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import React, { Suspense } from 'react'
-import { Button } from '@/components/ui/button'
 import { ChevronLeftIcon } from 'lucide-react'
 import { Metadata } from 'next'
 
@@ -119,17 +118,19 @@ export default async function ProductPage({ params }: Args) {
         type="application/ld+json"
       />
       <div className="container pt-8 pb-8">
-        <Button asChild variant="ghost" className="mb-4">
-          <Link href="/shop">
-            <ChevronLeftIcon />
-            All products
-          </Link>
-        </Button>
-        <div className="flex flex-col gap-12 rounded-lg border p-8 md:py-12 lg:flex-row lg:gap-8 bg-primary-foreground">
-          <div className="h-full w-full basis-full lg:basis-1/2">
+        <Link
+          className="mb-4 inline-flex min-h-6 items-center gap-1 text-sm text-muted transition-colors hover:text-primary-ink"
+          href="/shop"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+          Tous les produits
+        </Link>
+
+        <div className="surface surface-pad flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+          <div className="w-full basis-full lg:basis-1/2">
             <Suspense
               fallback={
-                <div className="relative aspect-square h-full max-h-[550px] w-full overflow-hidden" />
+                <div className="relative mx-auto mb-6 aspect-square w-full max-w-[550px] overflow-hidden rounded-2xl bg-secondary/30" />
               }
             >
               {Boolean(gallery?.length) && <Gallery gallery={gallery} />}
@@ -167,7 +168,7 @@ function RelatedProducts({ products }: { products: Product[] }) {
 
   return (
     <div className="py-8">
-      <h2 className="mb-4 text-2xl font-bold">Related Products</h2>
+      <h2 className="mb-4 font-serif text-2xl font-medium">Produits similaires</h2>
       <ul className="flex w-full gap-4 overflow-x-auto pt-1">
         {products.map((product) => (
           <li

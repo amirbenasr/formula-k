@@ -17,6 +17,7 @@ type Props = {
   addressID?: DefaultDocumentIDType
   initialData?: Partial<Omit<Address, 'country'>> & { country?: string }
   buttonText?: string
+  className?: string
   modalTitle?: string
   callback?: (address: Partial<Address>) => void
   skipSubmission?: boolean
@@ -26,8 +27,9 @@ type Props = {
 export const CreateAddressModal: React.FC<Props> = ({
   addressID,
   initialData,
-  buttonText = 'Add a new address',
-  modalTitle = 'Add a new address',
+  buttonText = 'Ajouter une adresse',
+  className,
+  modalTitle = 'Ajouter une adresse',
   callback,
   skipSubmission,
   disabled,
@@ -52,12 +54,16 @@ export const CreateAddressModal: React.FC<Props> = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild disabled={disabled}>
-        <Button variant={'outline'}>{buttonText}</Button>
+        <Button className={className} variant="outline">
+          {buttonText}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{modalTitle}</DialogTitle>
-          <DialogDescription>This address will be connected to your account.</DialogDescription>
+          <DialogTitle className="font-serif text-2xl font-medium">{modalTitle}</DialogTitle>
+          <DialogDescription>
+            Cette adresse sera enregistrée dans votre compte pour vos prochaines commandes.
+          </DialogDescription>
         </DialogHeader>
 
         <AddressForm

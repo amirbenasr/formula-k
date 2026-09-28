@@ -112,7 +112,7 @@ export function SearchBox({ autoFocus, onNavigate, className, inputId }: Props) 
           onFocus={() => query.trim().length >= 2 && setOpen(true)}
           placeholder="Rechercher un produit, une marque…"
           aria-label="Rechercher un produit"
-          className="h-11 w-full rounded-pill border border-border bg-card pl-10 pr-10 text-sm text-foreground placeholder:text-muted/80 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-10 text-sm text-foreground placeholder:text-muted/80 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         {query ? (
           <button
@@ -191,7 +191,7 @@ export function SearchBox({ autoFocus, onNavigate, className, inputId }: Props) 
                     setOpen(false)
                     onNavigate?.()
                   }}
-                  className="block bg-secondary/20 px-4 py-2.5 text-center text-[13px] font-medium text-primary hover:underline"
+                  className="block bg-secondary/20 px-4 py-2.5 text-center text-[13px] font-medium text-primary-ink hover:underline"
                 >
                   Voir tous les résultats
                 </Link>

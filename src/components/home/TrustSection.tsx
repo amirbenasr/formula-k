@@ -46,7 +46,7 @@ export function TrustSection() {
               key={reason.title}
               className="flex h-full flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5 transition duration-300 hover:-translate-y-0.5 hover:shadow-hover"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary-ink">
                 <reason.icon className="h-5 w-5" />
               </span>
               <h3 className="font-serif text-lg font-semibold text-foreground">{reason.title}</h3>
@@ -57,7 +57,7 @@ export function TrustSection() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Déjà commandé ?{' '}
-          <Link href="/find-order" className="font-medium text-primary hover:underline">
+          <Link href="/find-order" className="font-medium text-primary-ink hover:underline">
             Suivez votre commande
           </Link>
         </p>

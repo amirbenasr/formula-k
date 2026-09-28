@@ -1,29 +1,28 @@
 import { Media } from '@/components/Media'
-import { OrderStatus } from '@/components/OrderStatus'
 import { Price } from '@/components/Price'
-import { Button } from '@/components/ui/button'
-import { Media as MediaType, Order, Product, Variant } from '@/payload-types'
-import { formatDateTime } from '@/utilities/formatDateTime'
+import { Product, Variant } from '@/payload-types'
 import Link from 'next/link'
+import React from 'react'
 
 type Props = {
   product: Product
-  style?: 'compact' | 'default'
   variant?: Variant
   quantity?: number
   /**
    * Force all formatting to a particular currency.
    */
   currencyCode?: string
+  /**
+   * Optional extra content rendered under the product line (used by the cart).
+   */
+  children?: React.ReactNode
 }
 
-export const ProductItem: React.FC<Props> = ({
-  product,
-  style = 'default',
-  quantity,
-  variant,
-  currencyCode,
-}) => {
+/**
+ * One purchased product line: thumbnail, title, selected options, quantity and
+ * line subtotal. Used by the order detail and confirmation views.
+ */
+export const ProductItem: React.FC<Props> = ({ product, quantity, variant, currencyCode }) => {
   const { title } = product
 
   const metaImage =
@@ -42,12 +41,10 @@ export const ProductItem: React.FC<Props> = ({
       const variantOptionID =
         typeof item.variantOption === 'object' ? item.variantOption.id : item.variantOption
 
-      const hasMatch = variant?.options?.some((option) => {
+      return variant?.options?.some((option) => {
         if (typeof option === 'object') return option.id === variantOptionID
-        else return option === variantOptionID
+        return option === variantOptionID
       })
-
-      return hasMatch
     })
 
     if (imageVariant && typeof imageVariant.image !== 'string') {
@@ -59,45 +56,46 @@ export const ProductItem: React.FC<Props> = ({
   const itemURL = `/products/${product.slug}${variant ? `?variant=${variant.id}` : ''}`
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-stretch justify-stretch h-20 w-20 p-2 rounded-lg border">
-        <div className="relative w-full h-full">
-          {image && typeof image !== 'string' && (
+    <div className="flex items-start gap-4">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary/30 p-1.5">
+        <div className="relative h-full w-full">
+          {image && typeof image !== 'string' ? (
             <Media className="" fill imgClassName="rounded-lg object-cover" resource={image} />
-          )}
+          ) : null}
         </div>
       </div>
-      <div className="flex grow justify-between items-center">
-        <div className="flex flex-col gap-1">
-          <p className="font-medium text-lg">
-            <Link href={itemURL}>{title}</Link>
+
+      <div className="flex min-w-0 grow items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-base leading-snug font-medium text-foreground">
+            <Link
+              className="inline-flex min-h-6 items-center hover:text-primary-ink"
+              href={itemURL}
+            >
+              {title}
+            </Link>
           </p>
-          {variant && (
-            <p className="text-sm font-mono text-primary/50 tracking-widest">
+
+          {variant ? (
+            <p className="text-sm text-muted">
               {variant.options
-                ?.map((option) => {
-                  if (typeof option === 'object') return option.label
-                  return null
-                })
+                ?.map((option) => (typeof option === 'object' ? option.label : null))
+                .filter(Boolean)
                 .join(', ')}
             </p>
-          )}
-          <div>
-            {'x'}
-            {quantity}
-          </div>
+          ) : null}
+
+          {quantity ? <p className="text-sm text-muted">Quantité : {quantity}</p> : null}
         </div>
 
-        {itemPrice && quantity && (
-          <div className="text-right">
-            <p className="font-medium text-lg">Subtotal</p>
-            <Price
-              className="font-mono text-primary/50 text-sm"
-              amount={itemPrice * quantity}
-              currencyCode={currencyCode}
-            />
+        {itemPrice && quantity ? (
+          <div className="shrink-0 text-right">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+              Sous-total
+            </p>
+            <Price amount={itemPrice * quantity} currencyCode={currencyCode} />
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

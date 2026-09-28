@@ -1,6 +1,6 @@
 'use client'
 
-import type { Media as MediaType, Product } from '@/payload-types'
+import type { Product } from '@/payload-types'
 
 import { Media } from '@/components/Media'
 import { GridTileImage } from '@/components/Grid/tile'
@@ -49,11 +49,14 @@ export const Gallery: React.FC<Props> = ({ gallery }) => {
 
   return (
     <div>
-      <div className="relative w-full overflow-hidden mb-8">
+      {/* Square frame with a hard max height: the portrait catalogue shots no
+          longer stretch the whole product card into a mostly empty panel. */}
+      <div className="relative mx-auto mb-6 aspect-square w-full max-w-[550px] overflow-hidden rounded-2xl border border-border bg-secondary/30">
         <Media
           resource={gallery[current].image}
-          className="w-full"
-          imgClassName="w-full rounded-lg"
+          fill
+          size="(min-width: 1024px) 45vw, 90vw"
+          imgClassName="object-cover"
         />
       </div>
 

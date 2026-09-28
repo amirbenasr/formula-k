@@ -15,7 +15,7 @@ const spinnerVariants = cva('flex-col items-center justify-center', {
   },
 })
 
-const loaderVariants = cva('animate-spin text-primary', {
+const loaderVariants = cva('animate-spin text-primary-ink', {
   variants: {
     size: {
       small: 'size-6',
@@ -29,8 +29,7 @@ const loaderVariants = cva('animate-spin text-primary', {
 })
 
 interface SpinnerContentProps
-  extends VariantProps<typeof spinnerVariants>,
-    VariantProps<typeof loaderVariants> {
+  extends VariantProps<typeof spinnerVariants>, VariantProps<typeof loaderVariants> {
   className?: string
   children?: React.ReactNode
 }

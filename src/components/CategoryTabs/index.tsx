@@ -25,9 +25,9 @@ async function List() {
 
   return (
     <React.Fragment>
-      <nav>
-        <ul className="flex gap-3">
-          <Item title="All" href="/shop" />
+      <nav aria-label="Catégories">
+        <ul className="flex flex-wrap gap-2">
+          <Item title="Tous les produits" href="/shop" />
           <Suspense fallback={null}>
             {categories.map((category) => {
               return <Item {...category} key={category.href} />

@@ -1,5 +1,6 @@
 import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
-import { ArrowRight, BadgeCheck, Sparkles, Truck } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import React from 'react'
 
@@ -7,15 +8,12 @@ type Props = {
   products: ProductCardProduct[]
 }
 
-const guarantees = [
-  { icon: Truck, label: 'Expédition en 24–48h' },
-  { icon: BadgeCheck, label: 'Paiement à la livraison' },
-  { icon: Sparkles, label: 'Sélection 100% authentique' },
-]
-
 /**
  * Product-first hero: the shop's actual catalogue is visible in the first
  * viewport, next to a short pitch and the primary calls to action.
+ *
+ * Reassurance lives in the single <TrustBar /> band right below the hero — the
+ * hero itself does not repeat the same claims.
  */
 export function Hero({ products }: Props) {
   return (
@@ -42,24 +40,17 @@ export function Hero({ products }: Props) {
               Commandez en 1 minute, payez à la réception.
             </p>
 
-            <div className="order-5 mt-1 flex flex-wrap gap-3 lg:mt-6">
-              <Link href="/shop" className="btn-primary">
-                Découvrir la boutique
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-              <Link href="/shop?sort=-createdAt" className="btn-outline">
-                Nouveautés
-              </Link>
+            <div className="order-5 mt-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:mt-6">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href="/shop">
+                  Découvrir la boutique
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                <Link href="/shop?sort=-createdAt">Nouveautés</Link>
+              </Button>
             </div>
-
-            <ul className="order-6 mt-1 flex flex-col gap-2 lg:mt-6">
-              {guarantees.map((item) => (
-                <li key={item.label} className="flex items-center gap-2 text-[13px] text-muted">
-                  <item.icon className="h-4 w-4 shrink-0 text-accent" />
-                  {item.label}
-                </li>
-              ))}
-            </ul>
           </div>
 
           <div className="order-4 lg:order-none lg:col-span-8">
@@ -69,7 +60,6 @@ export function Hero({ products }: Props) {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    variant="compact"
                     priority={index < 2}
                     imageSizes="(min-width: 1024px) 20vw, 45vw"
                   />
@@ -77,7 +67,7 @@ export function Hero({ products }: Props) {
               </div>
             ) : (
               <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-primary/30 bg-card/60 p-8 text-center">
-                <Sparkles className="h-8 w-8 text-primary" />
+                <Sparkles className="h-8 w-8 text-primary-ink" />
                 <p className="font-serif text-xl font-semibold">Catalogue en préparation</p>
                 <p className="max-w-sm text-sm text-muted">
                   Vos produits apparaîtront ici automatiquement dès qu&apos;ils seront publiés dans

@@ -1,5 +1,4 @@
 import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
-import { cn } from '@/utilities/cn'
 import React from 'react'
 
 import { SectionHeading } from './SectionHeading'
@@ -26,7 +25,6 @@ export function BestSellers({ products, ranked = false }: Props) {
               : 'La sélection de l’équipe : les essentiels pour démarrer une routine K-Beauty.'
           }
           href="/shop"
-          linkLabel="Toute la boutique"
         />
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -41,7 +39,7 @@ export function BestSellers({ products, ranked = false }: Props) {
         </div>
 
         {ranked ? (
-          <p className={cn('mt-4 text-center text-xs text-muted')}>
+          <p className="mt-4 text-center text-xs text-muted">
             Classement établi à partir des commandes réellement passées sur Formula K.
           </p>
         ) : null}

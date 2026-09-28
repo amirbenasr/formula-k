@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import React from 'react'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { FindOrderForm } from '@/components/forms/FindOrderForm'
-import { getPayload } from 'payload'
-import { headers as getHeaders } from 'next/headers.js'
 import configPromise from '@payload-config'
+import { PackageSearch } from 'lucide-react'
+import { headers as getHeaders } from 'next/headers.js'
+import { getPayload } from 'payload'
+import React from 'react'
 
 export default async function FindOrderPage() {
   const headers = await getHeaders()
@@ -13,17 +14,21 @@ export default async function FindOrderPage() {
   const { user } = await payload.auth({ headers })
 
   return (
-    <div className="container py-16">
+    <AuthShell
+      description="Renseignez l’e-mail utilisé lors de la commande et son numéro pour suivre votre colis."
+      icon={PackageSearch}
+      title="Suivre ma commande"
+    >
       <FindOrderForm initialEmail={user?.email} />
-    </div>
+    </AuthShell>
   )
 }
 
 export const metadata: Metadata = {
-  description: 'Find your order with us using your email.',
-  openGraph: mergeOpenGraph({
-    title: 'Find order',
+  description: 'Suivez votre commande Formula K avec votre e-mail et votre numéro de commande.',
+  openGraph: {
+    title: 'Suivre ma commande',
     url: '/find-order',
-  }),
-  title: 'Find order',
+  },
+  title: 'Suivre ma commande',
 }
