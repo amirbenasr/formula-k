@@ -1,0 +1,37 @@
+# pnpm 12 no longer reads the "pnpm" field in package.json, and the
+# `onlyBuiltDependencies` setting it used was replaced by `allowBuilds` in
+# pnpm 11 (and silently ignored since). `overrides` must stay configured here
+# too: the lockfile already records that entry, so removing it makes a frozen
+# install fail with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH.
+overrides:
+  '@modelcontextprotocol/sdk': ^1.26.0
+
+# Dependency build-script decisions. pnpm 12 requires an explicit verdict per
+# package and fails the install with ERR_PNPM_IGNORED_BUILDS otherwise.
+allowBuilds:
+  # Payload's image processing (resizing, crops, focal point) needs the
+  # prebuilt libvips bindings.
+  sharp: true
+  # esbuild ships a platform binary via a postinstall step; tsx, vitest and the
+  # Next/eslint toolchain all depend on it.
+  esbuild: true
+  # Native Rust module pulled in through the eslint import resolver chain.
+  unrs-resolver: true
+  # Git hooks are already managed by husky (`prepare: husky`), so this
+  # postinstall would install a second, competing set of hooks.
+  '@vercel/git-hooks': false
+
+# Supply-chain policy: this environment enforces minimumReleaseAge (1 day), which
+# blocks packages published within the last 24h. The entries below are all
+# pre-existing transitive dependencies already present in the committed lockfile
+# and already installed; they are allowlisted explicitly so that the age gate
+# stays in force for every other package.
+minimumReleaseAgeExclude:
+  - '@ai-sdk/deepseek@3.0.57'
+  - '@ai-sdk/gateway@4.0.101'
+  - '@ai-sdk/mcp@2.0.63'
+  - '@ai-sdk/provider-utils@5.0.52'
+  - '@ai-sdk/provider@4.0.20'
+  - '@ai-sdk/react@4.0.126'
+  - ai@7.0.123
+  - hono@4.13.12
