@@ -1,0 +1,127 @@
+name: Database
+
+# Two separate concerns, deliberately split:
+#
+#   verify  — runs on every PR. Proves the migrations still reproduce the schema
+#             and that nobody changed a collection without writing one. Needs no
+#             secrets and touches no real database.
+#   migrate — runs only after a merge to main. Applies pending migrations to the
+#             database in DATABASE_URL. This is the one that needs a secret, and
+#             it is the reason you no longer run SQL by hand.
+#
+# The migrate job is intentionally its own workflow (not a Vercel build step):
+# a build hook that mutates production data is hard to review, hard to re-run,
+# and fires on preview deploys too.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allows a manual run from the Actions tab to apply migrations on demand.
+  workflow_dispatch:
+
+# Never let two migration runs overlap: two `payload migrate` processes racing on
+# the same database is how a migration history gets corrupted.
+concurrency:
+  group: db-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify migrations match the schema
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: 22
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      # `migrate:create` diffs the Drizzle schema against the snapshots committed
+      # in src/migrations. It runs with `disableDBConnect`, so this needs no
+      # database — only a syntactically valid URL.
+      - name: Check for a collection change with no migration
+        env:
+          DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+          DB_SSL: 'false'
+          PAYLOAD_SECRET: ci-not-a-real-secret
+        run: |
+          set -o pipefail
+
+          # It prompts "No schema changes detected. Create a blank migration?" and
+          # defaults to No on EOF, which is exactly "nothing to do".
+          pnpm db:migrate:create ci_drift_check </dev/null | tee /tmp/drift.log
+
+          if git status --porcelain src/migrations | grep -E '\.(ts|json)$' | grep -v 'index.ts'; then
+            echo "::error::A collection changed without a migration. Run 'pnpm db:migrate:create <name>' and commit the result."
+            git status --porcelain src/migrations
+            exit 1
+          fi
+
+          # index.ts is rewritten by the command even on a no-op; a diff there
+          # would only be noise, so normalise it away.
+          git checkout -- src/migrations/index.ts 2>/dev/null || true
+
+  migrate:
+    name: Apply migrations
+    # Only on main. A PR must never be able to write to the production database.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    # A GitHub Environment gives you a record of what ran, and optional required
+    # reviewers, without changing anything else. Create it as "production".
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: 22
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Fail fast if DATABASE_URL is not configured
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::The DATABASE_URL secret is not set. Add it in Settings → Secrets and variables → Actions, or disable this workflow."
+            exit 1
+          fi
+
+      - name: Show what will run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_SSL: ${{ vars.DB_SSL || 'true' }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+        run: pnpm db:migrate:status
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Managed Postgres (Neon, Supabase, RDS) needs TLS. Set a repository
+          # variable DB_SSL=false only for a local/self-hosted database.
+          DB_SSL: ${{ vars.DB_SSL || 'true' }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          # node-postgres prefers IPv6 for localhost, which fails in Actions
+          # containers where only IPv4 is bound.
+          NODE_OPTIONS: --no-deprecation --dns-result-order=ipv4first
+        run: pnpm db:migrate

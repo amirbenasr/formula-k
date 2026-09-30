@@ -32,7 +32,7 @@ import type { User } from '../../src/payload-types'
 
 const APPLY = process.argv.includes('--apply')
 
-const BRAND = { slug: 'laneige', title: 'La neige' }
+const BRAND = { slug: 'laneige', title: 'Laneige' }
 
 const PRODUCTS = [
   {

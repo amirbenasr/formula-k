@@ -77,6 +77,17 @@ export default buildConfig({
       // Local development against docker-compose.yml sets DB_SSL=false.
       ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: true },
     },
+    // Migrations are the source of truth for the schema, so the silent dev push
+    // is off by default. It used to create tables in development that no
+    // migration described, which is how this repo ended up with a local schema
+    // that production had no way to reproduce.
+    //
+    // When you are iterating on a collection and do not want to write a
+    // migration for every intermediate save, opt in with:
+    //   DB_PUSH=true pnpm dev
+    // ...then generate a migration (`pnpm db:migrate:create <name>`) before you
+    // merge. `pnpm db:migrate` applies migrations to the database you point at.
+    push: process.env.DB_PUSH === 'true',
   }),
   editor: lexicalEditor({
     features: () => {
