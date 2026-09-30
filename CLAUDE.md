@@ -21,7 +21,10 @@ pnpm typecheck             # tsc --noEmit
 pnpm lint                  # next lint
 pnpm generate:types        # Regenerate src/payload-types.ts after schema changes
 pnpm generate:importmap    # Regenerate admin import map after component changes
-pnpm build:migrate         # Run Payload migrations
+pnpm db:migrate            # Apply pending migrations to DATABASE_URL
+pnpm db:migrate:create     # Generate a migration after changing a collection
+pnpm db:migrate:status     # Show which migrations have run
+pnpm db:bootstrap          # Mark an existing (push-created) schema as migrated
 pnpm test                  # unit + int + e2e (sequential)
 pnpm test:unit             # vitest unit project
 pnpm test:int              # vitest int project
@@ -73,6 +76,7 @@ src/
 
 - TypeScript strict; path alias `@/*` → `src/*`.
 - After editing collections/globals/fields: run `pnpm generate:types`. After editing admin components or their paths: run `pnpm generate:importmap`.
+- After editing collections/globals/fields you MUST also run `pnpm db:migrate:create <name>` and commit the generated files. Migrations — not the dev schema push — are the source of truth; CI fails a PR that changes the schema without one. See `docs/migrations.md`.
 - Access control lives in `src/access/`; reuse these helpers instead of inlining.
 - Follow the security rules in `AGENTS.md` (local API `overrideAccess: false` when passing `user`, always forward `req` in nested ops inside hooks, guard hook recursion with `context` flags).
 - Lint-staged blocks commits on ESLint warnings (`--max-warnings=0`). Husky runs this pre-commit.

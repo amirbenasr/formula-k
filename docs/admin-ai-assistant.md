@@ -171,7 +171,7 @@ first two are reads:
 
 ```
 find_products "Lip Sleeping Mask EX (Berry) 3g"   → no match
-find_brands   "La neige"                          → id 28
+find_brands   "Laneige"                           → id 28
 stage_product_create { title, brand: 28, price: 1, inventory: 9, status: 'published' }
                                                   → pending AiActionLog row
                                           ▼
