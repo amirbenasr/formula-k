@@ -14,12 +14,15 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
+import { AiActionLog } from '@/collections/AiActionLog'
 import { Brands } from '@/collections/Brands'
 import { Categories } from '@/collections/Categories'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Users } from '@/collections/Users'
 import { RewardTiers, RewardTransactions, RewardsCatalog } from '@/collections/Rewards'
+import { adminAiApplyEndpoint } from '@/endpoints/adminAi/apply'
+import { adminAiChatEndpoint } from '@/endpoints/adminAi/chat'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
@@ -32,11 +35,22 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     components: {
+      afterNavLinks: ['@/components/AIAssistant/NavLink#AIAssistantNavLink'],
       beforeLogin: ['@/components/BeforeLogin#BeforeLogin'],
       beforeDashboard: ['@/components/BeforeDashboard#BeforeDashboard'],
       graphics: {
         Logo: '@/components/Logo/Logo#Logo',
         Icon: '@/components/Logo/Logo#Logo',
+      },
+      // A custom AdminViewConfig has no `navLink` property, so the sidebar entry
+      // is contributed separately via afterNavLinks above.
+      views: {
+        aiAssistant: {
+          Component: '@/components/AIAssistant/View#AIAssistantView',
+          exact: true,
+          meta: { title: 'AI Assistant' },
+          path: '/ai',
+        },
       },
     },
     meta: {
@@ -54,6 +68,7 @@ export default buildConfig({
     RewardTiers,
     RewardTransactions,
     RewardsCatalog,
+    AiActionLog,
   ],
   db: postgresAdapter({
     pool: {
@@ -111,7 +126,9 @@ export default buildConfig({
       },
     },
   }),
-  endpoints: [],
+  // The admin AI assistant. Both routes enforce admin auth in their handlers,
+  // because Payload custom endpoints are unauthenticated by default.
+  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
