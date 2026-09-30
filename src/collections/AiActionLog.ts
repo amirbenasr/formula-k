@@ -4,10 +4,12 @@ import type { CollectionConfig } from 'payload'
 /**
  * Every change the admin AI assistant proposes is staged here first.
  *
- * The assistant itself has NO write access to products or orders. When the
+ * The assistant itself has NO write access to products or brands. When the
  * model wants to change something it can only create a `pending` row in this
- * collection describing the change. A human then clicks Apply in the chat,
- * which calls `/api/admin-ai/apply` and performs the real write.
+ * collection describing the change — including whole product/brand creates,
+ * edits and publish flips, in the same `changes` JSON column (discriminated by
+ * `kind`). A human then clicks Apply in the chat, which calls
+ * `/api/admin-ai/apply` and performs the real write.
  *
  * That keeps "dry-run + confirm" a property of the server rather than a request
  * we politely make of the model in a system prompt.
@@ -38,6 +40,23 @@ export const AiActionLog: CollectionConfig = {
       name: 'toolName',
       type: 'text',
       admin: { description: 'Which assistant tool produced this proposal.' },
+      required: true,
+    },
+    {
+      name: 'kind',
+      type: 'select',
+      admin: {
+        description:
+          'Which family of write this proposal belongs to. Drives how /api/admin-ai/apply executes it.',
+        position: 'sidebar',
+      },
+      defaultValue: 'inventory',
+      index: true,
+      options: [
+        { label: 'Stock', value: 'inventory' },
+        { label: 'Product', value: 'product' },
+        { label: 'Brand', value: 'brand' },
+      ],
       required: true,
     },
     {
