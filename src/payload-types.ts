@@ -1269,6 +1269,10 @@ export interface AiActionLog {
    * Which assistant tool produced this proposal.
    */
   toolName: string;
+  /**
+   * Which family of write this proposal belongs to. Drives how /api/admin-ai/apply executes it.
+   */
+  kind: 'inventory' | 'product' | 'brand';
   status: 'pending' | 'applied' | 'failed' | 'cancelled';
   conversationId?: string | null;
   requestedBy: number | User;
@@ -1789,6 +1793,7 @@ export interface RewardsCatalogSelect<T extends boolean = true> {
 export interface AiActionLogsSelect<T extends boolean = true> {
   summary?: T;
   toolName?: T;
+  kind?: T;
   status?: T;
   conversationId?: T;
   requestedBy?: T;

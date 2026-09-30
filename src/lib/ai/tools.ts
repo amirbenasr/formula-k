@@ -2,17 +2,25 @@ import { tool, type ToolSet } from 'ai'
 import type { Where } from 'payload'
 import { z } from 'zod'
 
+import {
+  stageBrandWrite,
+  stageProductStatus,
+  stageProductWrite,
+} from './catalogue'
 import { inventoryRows, resolveTargets } from './resolve'
-import { money, type AiToolContext, type LooseDoc, type PlannedChange } from './types'
+import type { AiToolContext, LooseDoc, PlannedChange, StagedWrite } from './types'
+import { money } from './types'
 
 /**
  * Tools exposed to the admin assistant.
  *
- * Read tools run immediately. The one write tool cannot write: it can only
- * create a `pending` AiActionLog row. Applying happens in
- * `/api/admin-ai/apply`, triggered by a human clicking Apply in the chat UI.
- * The model therefore has no code path to mutate the catalogue, regardless of
- * what it is asked or how it is prompted.
+ * Read tools run immediately. The write tools cannot write: each one only
+ * creates a `pending` AiActionLog row holding an already-validated change.
+ * Applying happens in `/api/admin-ai/apply`, triggered by a human clicking Apply
+ * in the chat UI. The model therefore has no code path to mutate the catalogue,
+ * regardless of what it is asked or how it is prompted — which is what lets it
+ * create products and flip publish state without the risk of an unreviewed live
+ * change.
  *
  * NOTE ON THE SCHEMA/execute PATTERN
  * Every `execute` parameter is explicitly annotated with the schema's inferred
@@ -34,6 +42,11 @@ const findProductsSchema = z.object({
   query: z.string().optional().describe('Text to match against product title or slug'),
 })
 type FindProductsInput = z.infer<typeof findProductsSchema>
+
+const findBrandsSchema = z.object({
+  query: z.string().optional().describe('Text to match against brand title or slug'),
+})
+type FindBrandsInput = z.infer<typeof findBrandsSchema>
 
 const getInventorySchema = z.object({
   query: z.string().describe('Product slug, id, title, or "product option" phrase'),
@@ -80,7 +93,82 @@ const stageInventorySchema = z.object({
 })
 type StageInventoryInput = z.infer<typeof stageInventorySchema>
 
+/**
+ * The writable product surface.
+ *
+ * `price` is a single number rather than the plugin's `priceInUSD` /
+ * `priceInUSDEnabled` pair, and the tool maps it: a model that had to set the
+ * currency flag would eventually forget it and write an invisible price.
+ */
+const productFieldsSchema = z.object({
+  brand: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Brand id (number). Look it up with find_brands; create it with stage_brand_create.'),
+  categories: z.array(z.number().int().positive()).optional().describe('Category ids'),
+  description: z
+    .string()
+    .optional()
+    .describe('Plain text. Blank lines become paragraphs; lines starting with "- " or "1. " become lists.'),
+  featuredInVideoShowcase: z.boolean().optional(),
+  gallery: z.array(z.number().int().positive()).optional().describe('Media ids'),
+  inventory: z.number().int().min(0).optional().describe('Stock count for a simple (non-variant) product'),
+  price: z
+    .number()
+    .min(0)
+    .optional()
+    .describe('Selling price as a number, e.g. 1 for 1.00. Writes both the amount and its currency flag.'),
+  slug: z.string().optional().describe('URL slug. Derived from the title when omitted.'),
+  status: z
+    .enum(['draft', 'published'])
+    .optional()
+    .describe('"published" makes the product visible on the storefront.'),
+  title: z.string().optional(),
+})
+const stageProductCreateSchema = z.object({
+  note: z.string().optional().describe('Why this product is being added'),
+  product: productFieldsSchema.describe('The product to create'),
+})
+type StageProductCreateInput = z.infer<typeof stageProductCreateSchema>
+
+const stageProductUpdateSchema = z.object({
+  id: z.string().describe('Product id, slug or title to update'),
+  note: z.string().optional(),
+  product: productFieldsSchema.describe('Only the fields that should change'),
+})
+type StageProductUpdateInput = z.infer<typeof stageProductUpdateSchema>
+
+const stageProductPublishSchema = z.object({
+  id: z.string().describe('Product id, slug or title'),
+  note: z.string().optional(),
+  publish: z
+    .boolean()
+    .describe('true publishes to the storefront; false moves it back to draft (hides it, nothing is deleted)'),
+})
+type StageProductPublishInput = z.infer<typeof stageProductPublishSchema>
+
+const stageBrandWriteSchema = z.object({
+  brand: z
+    .object({
+      description: z.string().optional(),
+      logo: z.number().int().positive().optional().describe('Media id'),
+      slug: z.string().optional().describe('Derived from the title when omitted'),
+      title: z.string().optional(),
+    })
+    .describe('Brand fields'),
+  id: z
+    .string()
+    .optional()
+    .describe('Omit to create a new brand; pass a brand id, slug or title to edit an existing one'),
+  note: z.string().optional(),
+})
+type StageBrandWriteInput = z.infer<typeof stageBrandWriteSchema>
+
 export function buildTools({ conversationId, payload, user }: AiToolContext): ToolSet {
+  const context: AiToolContext = { conversationId, payload, user }
+
   /** All reads run as the logged-in admin, never with elevated access. */
   const asAdmin = <T extends Record<string, unknown>>(
     args: T,
@@ -93,7 +181,7 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
   return {
     find_products: tool({
       description:
-        'Search the product catalogue by title, slug or brand. Returns id, title, slug, price, whether the product uses variants, and its stock (per variant when it has them). Use this to look things up before acting.',
+        'Search the product catalogue by title, slug or brand. Returns id, title, slug, price, whether the product uses variants, and its stock (per variant when it has them). ALWAYS use this before creating a product, so you do not add a duplicate.',
       inputSchema: findProductsSchema,
       execute: async ({ limit = 10, lowStockBelow, query }: FindProductsInput) => {
         const where: Where = query
@@ -145,6 +233,36 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
         }
 
         return { count: rows.length, products: rows }
+      },
+    }),
+
+    find_brands: tool({
+      description:
+        'Search brands by title or slug. Use this to get a brand id before assigning it to a product, and to check whether a brand already exists before creating one.',
+      inputSchema: findBrandsSchema,
+      execute: async ({ query }: FindBrandsInput) => {
+        const where: Where = query
+          ? { or: [{ title: { contains: query } }, { slug: { contains: query } }] }
+          : {}
+
+        const { docs } = await payload.find(
+          asAdmin({
+            collection: 'brands',
+            depth: 0,
+            limit: 50,
+            sort: 'title',
+            where,
+          }),
+        )
+
+        return {
+          brands: (docs as LooseDoc[]).map((brand) => ({
+            id: brand.id,
+            slug: brand.slug,
+            title: brand.title,
+          })),
+          count: docs.length,
+        }
       },
     }),
 
@@ -327,6 +445,46 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
       },
     }),
 
+    stage_product_create: tool({
+      description:
+        'Propose a NEW product. Does not create anything by itself — it records a pending action the admin approves. Call find_products first to prove the product does not already exist, and find_brands to get the brand id (brand is required). Supply `price` as a plain number and `status: "published"` if it should be visible on the storefront immediately.',
+      inputSchema: stageProductCreateSchema,
+      execute: async ({ product }: StageProductCreateInput) =>
+        stageProductWrite(context, { product }),
+    }),
+
+    stage_product_update: tool({
+      description:
+        'Propose an EDIT to an existing product (price, title, stock, description, brand, visibility…). Does not write anything by itself — the admin approves it. Pass only the fields that should change. Identify the product with its numeric id or its slug.',
+      inputSchema: stageProductUpdateSchema,
+      execute: async ({ id, product }: StageProductUpdateInput) =>
+        stageProductWrite(context, { id, product }),
+    }),
+
+    stage_product_publish: tool({
+      description:
+        'Propose making a product visible on the storefront (`publish: true`) or hiding it again (`publish: false`, back to draft). Nothing is deleted. Does not write anything by itself — the admin approves it.',
+      inputSchema: stageProductPublishSchema,
+      execute: async ({ id, publish }: StageProductPublishInput) =>
+        stageProductStatus(context, { id, publish }),
+    }),
+
+    stage_brand_create: tool({
+      description:
+        'Propose a NEW brand. Does not create anything by itself — the admin approves it. Call find_brands first so you do not propose a duplicate. Products can only be assigned brands that already exist.',
+      inputSchema: stageBrandWriteSchema,
+      execute: async ({ brand }: StageBrandWriteInput) =>
+        stageBrandWrite(context, { brand }),
+    }),
+
+    stage_brand_update: tool({
+      description:
+        'Propose an EDIT to an existing brand (title, slug, description, logo). Does not write anything by itself — the admin approves it.',
+      inputSchema: stageBrandWriteSchema,
+      execute: async ({ brand, id }: StageBrandWriteInput) =>
+        stageBrandWrite(context, { brand, id }),
+    }),
+
     stage_inventory_update: tool({
       description:
         'Propose a stock change. This does NOT change anything by itself — it records a pending action that the admin must approve in the UI. Provide either `quantity` (absolute new count) or `delta` (relative change) for each item. Always call get_inventory first and confirm the match when a query is ambiguous.',
@@ -387,12 +545,15 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
             .map((change) => `${change.label} ${change.from}→${change.to}`)
             .join(', ')}`
 
+        const write: StagedWrite = { changes, targetKind: 'inventory' }
+
         const action = await payload.create(
           asAdmin({
             collection: 'ai-action-logs',
             data: {
-              changes,
+              changes: write,
               conversationId,
+              kind: 'inventory',
               requestedBy: user.id,
               status: 'pending',
               summary,
