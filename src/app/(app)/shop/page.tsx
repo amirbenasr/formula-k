@@ -1,10 +1,9 @@
 import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
 import { ProductPagination } from '@/components/ProductCard/Pagination'
 import { ProductGrid } from '@/components/ProductCard/ProductGrid'
+import { getCachedCatalogProducts } from '@/utilities/catalog'
 import { searchProductCatalog } from '@/utilities/storefront'
-import configPromise from '@payload-config'
 import type { Metadata } from 'next'
-import { getPayload } from 'payload'
 import React from 'react'
 
 export const metadata: Metadata = {
@@ -36,69 +35,14 @@ export default async function ShopPage({ searchParams }: Props) {
   const requestedPage = Number.parseInt(first(params.page) ?? '1', 10)
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
-  const payload = await getPayload({ config: configPromise })
-
-  const products = await payload.find({
-    collection: 'products',
-    draft: false,
-    overrideAccess: false,
-    limit: PAGE_SIZE,
+  // Cached per filter combination: this route is dynamic because it reads
+  // `searchParams`, but it must not pay a database round trip on every hit.
+  const products = await getCachedCatalogProducts({
     page,
-    select: {
-      title: true,
-      slug: true,
-      brand: true,
-      gallery: true,
-      categories: true,
-      priceInUSD: true,
-      inventory: true,
-      enableVariants: true,
-      variants: true,
-      createdAt: true,
-    },
-    ...(sort ? { sort } : { sort: 'title' }),
-    ...(searchValue || category
-      ? {
-          where: {
-            and: [
-              {
-                _status: {
-                  equals: 'published',
-                },
-              },
-              ...(searchValue
-                ? [
-                    {
-                      // `description` is richText (jsonb): `like` on it is invalid
-                      // SQL on Postgres and made every search fail silently.
-                      or: [
-                        {
-                          title: {
-                            like: searchValue,
-                          },
-                        },
-                        {
-                          'brand.title': {
-                            like: searchValue,
-                          },
-                        },
-                      ],
-                    },
-                  ]
-                : []),
-              ...(category
-                ? [
-                    {
-                      categories: {
-                        contains: category,
-                      },
-                    },
-                  ]
-                : []),
-            ],
-          },
-        }
-      : {}),
+    pageSize: PAGE_SIZE,
+    sort,
+    search: searchValue,
+    categoryID: category,
   })
 
   let docs = products.docs as ProductCardProduct[]
@@ -108,7 +52,7 @@ export default async function ShopPage({ searchParams }: Props) {
   // `like` in Postgres is accent-sensitive, so "creme" never matched "Crème".
   // Fall back to the normalised catalogue search when the SQL query finds nothing.
   if (searchValue && products.docs.length === 0 && page === 1) {
-    const fallback = await searchProductCatalog(payload, searchValue, 60)
+    const fallback = await searchProductCatalog(searchValue, 60)
 
     if (sort) {
       const direction = sort.startsWith('-') ? -1 : 1

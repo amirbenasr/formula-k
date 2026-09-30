@@ -13,6 +13,7 @@ export interface Props {
   onClick?: () => void
   onLoad?: () => void
   priority?: boolean // for NextImage only
+  quality?: number // for NextImage only; defaults to 80
   ref?: Ref<HTMLImageElement | HTMLVideoElement | null>
   resource?: MediaType | string | number // for Payload media
   size?: string // for NextImage only

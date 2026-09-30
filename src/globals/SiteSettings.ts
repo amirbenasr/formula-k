@@ -1,10 +1,15 @@
 import type { GlobalConfig } from 'payload'
 
+import { createGlobalRevalidateHook } from '@/hooks/revalidateStorefront'
+
 export const SiteSettings: GlobalConfig = {
   slug: 'site-settings',
   label: 'Site Settings',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [createGlobalRevalidateHook('site-settings')],
   },
   fields: [
     {

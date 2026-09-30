@@ -1,5 +1,3 @@
-'use client'
-
 import type { StaticImageData } from 'next/image'
 
 import { cn } from '@/utilities/cn'
@@ -12,6 +10,15 @@ import { cssVariables } from '@/cssVariables'
 
 const { breakpoints } = cssVariables
 
+/**
+ * Payload-aware `next/image` wrapper.
+ *
+ * This is deliberately **not** a client component: it used to hold a
+ * `useState` for a "loading" flag whose value was never read, which pulled every
+ * product tile on every page into the client bundle and cost hydration work for
+ * nothing. Callers that need interactivity (the product gallery) are client
+ * components themselves, so importing this module from them still works.
+ */
 export const Image: React.FC<MediaProps> = (props) => {
   const {
     alt: altFromProps,
@@ -21,13 +28,12 @@ export const Image: React.FC<MediaProps> = (props) => {
     onClick,
     onLoad: onLoadFromProps,
     priority,
+    quality: qualityFromProps,
     resource,
     size: sizeFromProps,
     src: srcFromProps,
     width: widthFromProps,
   } = props
-
-  const [, setIsLoading] = React.useState(true)
 
   let width: number | undefined | null
   let height: number | undefined | null
@@ -50,11 +56,7 @@ export const Image: React.FC<MediaProps> = (props) => {
     // media served from this same app, so they must stay same-origin — prefixing
     // NEXT_PUBLIC_SERVER_URL breaks them whenever the app runs on another
     // host/port (previews, local dev on a non-default port).
-    if (url?.startsWith('http')) {
-      src = url
-    } else {
-      src = url || ''
-    }
+    src = url || ''
   }
 
   // NOTE: this is used by the browser to determine which image to download at different screen sizes
@@ -71,14 +73,9 @@ export const Image: React.FC<MediaProps> = (props) => {
       fill={fill}
       height={!fill ? height || heightFromProps : undefined}
       onClick={onClick}
-      onLoad={() => {
-        setIsLoading(false)
-        if (typeof onLoadFromProps === 'function') {
-          onLoadFromProps()
-        }
-      }}
+      onLoad={onLoadFromProps}
       priority={priority}
-      quality={90}
+      quality={qualityFromProps ?? 80}
       sizes={sizes}
       src={src}
       width={!fill ? width || widthFromProps : undefined}

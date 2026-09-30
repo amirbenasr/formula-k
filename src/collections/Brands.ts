@@ -1,6 +1,8 @@
 import { slugField } from 'payload'
 import type { CollectionConfig } from 'payload'
 
+import { brandRevalidate } from '@/hooks/revalidateStorefront'
+
 export const Brands: CollectionConfig = {
   slug: 'brands',
   access: {
@@ -9,6 +11,10 @@ export const Brands: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     group: 'Content',
+  },
+  hooks: {
+    afterChange: [brandRevalidate.afterChange],
+    afterDelete: [brandRevalidate.afterDelete],
   },
   fields: [
     {

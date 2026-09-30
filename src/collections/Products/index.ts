@@ -19,6 +19,8 @@ import {
 } from '@payloadcms/richtext-lexical'
 import { DefaultDocumentIDType, slugField, Where } from 'payload'
 
+import { productRevalidate } from '@/hooks/revalidateStorefront'
+
 export const ProductsCollection: CollectionOverride = ({ defaultCollection }) => ({
   ...defaultCollection,
   admin: {
@@ -53,6 +55,11 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
     meta: true,
     videos: true,
     featuredInVideoShowcase: true,
+  },
+  hooks: {
+    ...defaultCollection?.hooks,
+    afterChange: [...(defaultCollection?.hooks?.afterChange ?? []), productRevalidate.afterChange],
+    afterDelete: [...(defaultCollection?.hooks?.afterDelete ?? []), productRevalidate.afterDelete],
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -100,12 +107,12 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                   },
                   filterOptions: ({ data }) => {
                     if (data?.enableVariants && data?.variantTypes?.length) {
-                      const variantTypeIDs = data.variantTypes.map((item: any) => {
-                        if (typeof item === 'object' && item?.id) {
-                          return item.id
-                        }
-                        return item
-                      }) as DefaultDocumentIDType[]
+                      const variantTypeIDs = data.variantTypes.map(
+                        (item: DefaultDocumentIDType | { id: DefaultDocumentIDType }) =>
+                          typeof item === 'object' && item !== null && 'id' in item
+                            ? item.id
+                            : (item as DefaultDocumentIDType),
+                      ) as DefaultDocumentIDType[]
 
                       if (variantTypeIDs.length === 0)
                         return {

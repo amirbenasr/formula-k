@@ -10,6 +10,9 @@ import React from 'react'
 
 import { notFound } from 'next/navigation'
 
+/** Prerendered; `revalidatePage` invalidates the path when an editor saves. */
+export const revalidate = 3600
+
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
   const pages = await payload.find({
