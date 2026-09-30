@@ -30,6 +30,16 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    // Files emitted by `payload migrate:create`. Payload's migration template
+    // always destructures `{ db, payload, req }` even though most migrations only
+    // use `db`, so `no-unused-vars` fires on generated code that should never be
+    // hand-edited. Every other rule still applies.
+    files: ['src/migrations/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
 ]
 
 export default eslintConfig
