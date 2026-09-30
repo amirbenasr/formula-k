@@ -8,6 +8,8 @@ import {
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+import { revalidateMediaAfterChange, revalidateMediaAfterDelete } from '@/hooks/revalidateStorefront'
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -18,6 +20,10 @@ export const Media: CollectionConfig = {
   slug: 'media',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateMediaAfterChange],
+    afterDelete: [revalidateMediaAfterDelete],
   },
   fields: [
     {

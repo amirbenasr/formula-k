@@ -7,16 +7,27 @@ import { NewArrivals } from '@/components/home/NewArrivals'
 import { TrustBar } from '@/components/home/TrustBar'
 import type { ProductCardProduct } from '@/components/ProductCard'
 import { VideoShowcase } from '@/components/VideoShowcase'
-import config from '@payload-config'
-import { getPayload } from 'payload'
 
-import { getBestSellers, getCategoryShowcase, getFreshProducts } from '@/utilities/storefront'
+import {
+  getCachedBestSellers,
+  getCachedBrands,
+  getCachedCategoryShowcase,
+  getCachedFreshProducts,
+  getCachedVideoShowcaseProducts,
+} from '@/utilities/storefront'
 
 export const metadata = {
   title: 'Formula K | K-Beauty en Tunisie — livraison 24-48h, paiement à la livraison',
   description:
     'Sérums, crèmes, masques et solaires des meilleures marques coréennes, livrés partout en Tunisie en 24–48h. Paiement à la livraison, produits 100% authentiques.',
 }
+
+/**
+ * The homepage is prerendered and served from the CDN. `revalidate` is a safety
+ * net: the Payload hooks invalidate the `products`/`brands`/`categories` tags
+ * the moment an editor saves, so content is normally live within seconds.
+ */
+export const revalidate = 3600
 
 /** How many products each rail would like to show. Shortfalls are fine, duplicates are not. */
 const HERO_COUNT = 4
@@ -32,34 +43,14 @@ const VIDEO_COUNT = 12
 const CATALOGUE_FETCH = 24
 
 export default async function HomePage() {
-  const payload = await getPayload({ config })
-
-  // One round of queries, run in parallel: the storefront must feel instant.
-  const [freshProducts, salesHistory, categoryShowcase, brandsResult, videoProductsResult] =
+  // One round of cached reads, run in parallel: the storefront must feel instant.
+  const [freshProducts, salesHistory, categoryShowcase, brandsResult, videoProducts] =
     await Promise.all([
-      getFreshProducts(payload, CATALOGUE_FETCH),
-      getBestSellers(payload, BEST_SELLERS_COUNT),
-      getCategoryShowcase(payload, 8),
-      payload.find({
-        collection: 'brands',
-        overrideAccess: false,
-        depth: 1,
-        limit: 12,
-        sort: 'title',
-      }),
-      payload.find({
-        collection: 'products',
-        draft: false,
-        overrideAccess: false,
-        depth: 2,
-        limit: VIDEO_COUNT,
-        where: {
-          and: [
-            { _status: { equals: 'published' } },
-            { featuredInVideoShowcase: { equals: true } },
-          ],
-        },
-      }),
+      getCachedFreshProducts(CATALOGUE_FETCH),
+      getCachedBestSellers(BEST_SELLERS_COUNT),
+      getCachedCategoryShowcase(8),
+      getCachedBrands(12),
+      getCachedVideoShowcaseProducts(VIDEO_COUNT),
     ])
 
   /**
@@ -86,7 +77,7 @@ export default async function HomePage() {
   const heroProducts = claim(freshProducts, HERO_COUNT)
 
   // 2. Video showcase — a curated flag, minus anything the hero already shows.
-  const videoCandidates = videoProductsResult.docs.filter(
+  const videoCandidates = videoProducts.filter(
     (product) => product.videos && product.videos.length > 0,
   )
   const videoShowcaseProducts = claim(videoCandidates, VIDEO_COUNT)

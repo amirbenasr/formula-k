@@ -5,6 +5,7 @@ import { GridTileImage } from '@/components/Grid/tile'
 import { Gallery } from '@/components/product/Gallery'
 import { ProductDescription } from '@/components/product/ProductDescription'
 import { ProductVideos } from '@/components/product/ProductVideos'
+import { getCachedProductBySlug, getProductSlugs } from '@/utilities/catalog'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
@@ -18,6 +19,25 @@ type Args = {
   params: Promise<{
     slug: string
   }>
+}
+
+/**
+ * Product pages are the storefront's money pages, so they are prerendered and
+ * served from the CDN instead of being server-rendered on every visit. The
+ * Payload hook revalidates the page the moment a product is saved; the hourly
+ * window is only a safety net.
+ */
+export const revalidate = 3600
+
+/**
+ * Prerender the published catalogue at build time. Unknown slugs are still
+ * generated on demand (`dynamicParams` defaults to true), so a product created
+ * after a deploy works immediately and is cached from then on.
+ */
+export async function generateStaticParams() {
+  const slugs = await getProductSlugs()
+
+  return slugs.map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
@@ -194,24 +214,25 @@ function RelatedProducts({ products }: { products: Product[] }) {
 const queryProductBySlug = async ({ slug }: { slug: string }) => {
   const { isEnabled: draft } = await draftMode()
 
+  // Published reads go through the data cache. Draft previews must never be
+  // served from it (or written to it), so they take the direct path.
+  if (!draft) {
+    return getCachedProductBySlug(slug)
+  }
+
   const payload = await getPayload({ config: configPromise })
 
   const result = await payload.find({
     collection: 'products',
     depth: 3,
-    draft,
+    draft: true,
     limit: 1,
-    overrideAccess: draft,
+    overrideAccess: true,
     pagination: false,
     where: {
-      and: [
-        {
-          slug: {
-            equals: slug,
-          },
-        },
-        ...(draft ? [] : [{ _status: { equals: 'published' } }]),
-      ],
+      slug: {
+        equals: slug,
+      },
     },
     populate: {
       variants: {

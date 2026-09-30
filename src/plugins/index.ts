@@ -4,6 +4,7 @@ import { seoPlugin } from '@payloadcms/plugin-seo'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
+import path from 'path'
 import { Plugin } from 'payload'
 
 import { adminOnlyFieldAccess } from '@/access/adminOnlyFieldAccess'
@@ -32,6 +33,25 @@ const generateURL: GenerateURL<Product | Page> = ({ doc }) => {
  * file unreadable: media URLs returned by the API pointed at a fake S3 endpoint
  * and each image request failed with ERR_INVALID_URL.
  */
+/**
+ * Public base URL for the bucket (Cloudflare R2 custom domain or r2.dev host).
+ *
+ * When it is configured, media URLs are absolute and point straight at the CDN.
+ * Without it Payload emits `/api/media/file/<filename>`, which means every
+ * product photo is streamed through a Vercel function that first has to read the
+ * database — slow, metered, and a single point of failure shared with the CMS.
+ */
+const r2PublicURL = (
+  process.env.R2_PUBLIC_URL ||
+  process.env.NEXT_PUBLIC_R2_URL ||
+  process.env.NEXT_PUBLIC_MEDIA_URL ||
+  ''
+).replace(/\/+$/, '')
+
+/** Mirrors `@payloadcms/storage-s3`'s own URL builder so size variants resolve. */
+const buildMediaURL = ({ filename, prefix = '' }: { filename: string; prefix?: string }) =>
+  `${r2PublicURL}/${path.posix.join(prefix, encodeURIComponent(filename))}`
+
 function hasValidR2Config() {
   const { R2_BUCKET, R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env
 
@@ -60,7 +80,11 @@ const s3StoragePlugin: Plugin[] = hasValidR2Config()
   ? [
       s3Storage({
         collections: {
-          media: true,
+          media: r2PublicURL
+            ? {
+                generateFileURL: buildMediaURL,
+              }
+            : true,
         },
         bucket: process.env.R2_BUCKET as string,
         config: {

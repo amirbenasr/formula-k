@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache'
 import { getPayload, type Payload, type Where } from 'payload'
 
 import type { ProductCardProduct } from '@/components/ProductCard'
+import { CACHE_TAGS } from '@/utilities/cacheTags'
 
 /**
  * Fields every product tile needs. Keeping `select` tight keeps the homepage fast
@@ -257,7 +258,91 @@ export const getCachedCategoryNav = unstable_cache(
     }))
   },
   ['storefront-category-nav'],
-  { tags: ['categories'] },
+  { revalidate: 3600, tags: [CACHE_TAGS.categories] },
+)
+
+/**
+ * Cached storefront feeds.
+ *
+ * Every read below is created inside the cached function (a Payload instance is
+ * not serializable and must not be a cache key), and every read declares the
+ * tags that the Payload hooks invalidate on save. The `revalidate` windows are
+ * safety nets, not the primary invalidation path.
+ */
+export const getCachedFreshProducts = unstable_cache(
+  async (limit = 12, inStockOnly = true): Promise<ProductCardProduct[]> => {
+    const payload = await getPayload({ config })
+
+    return getFreshProducts(payload, limit, { inStockOnly })
+  },
+  ['storefront-fresh-products'],
+  { revalidate: 3600, tags: [CACHE_TAGS.products] },
+)
+
+/**
+ * Best sellers scan the order history, so they are cached for longer than the
+ * rest of the catalogue and refreshed whenever an order is written.
+ */
+export const getCachedBestSellers = unstable_cache(
+  async (limit = 8): Promise<ProductCardProduct[]> => {
+    const payload = await getPayload({ config })
+
+    return getBestSellers(payload, limit)
+  },
+  ['storefront-best-sellers'],
+  { revalidate: 600, tags: [CACHE_TAGS.products, CACHE_TAGS.orders] },
+)
+
+export const getCachedCategoryShowcase = unstable_cache(
+  async (limit = 8): Promise<CategoryWithPreview[]> => {
+    const payload = await getPayload({ config })
+
+    return getCategoryShowcase(payload, limit)
+  },
+  ['storefront-category-showcase'],
+  { revalidate: 3600, tags: [CACHE_TAGS.products, CACHE_TAGS.categories] },
+)
+
+/** Brand directory + homepage brand strip, with logos populated. */
+export const getCachedBrands = unstable_cache(
+  async (limit = 200) => {
+    const payload = await getPayload({ config })
+
+    const { docs, totalDocs } = await payload.find({
+      collection: 'brands',
+      depth: 1,
+      limit,
+      overrideAccess: false,
+      pagination: false,
+      sort: 'title',
+    })
+
+    return { docs, totalDocs }
+  },
+  ['storefront-brands'],
+  { revalidate: 3600, tags: [CACHE_TAGS.brands] },
+)
+
+/** Products flagged for the homepage video showcase (videos already attached). */
+export const getCachedVideoShowcaseProducts = unstable_cache(
+  async (limit = 12): Promise<Product[]> => {
+    const payload = await getPayload({ config })
+
+    const { docs } = await payload.find({
+      collection: 'products',
+      draft: false,
+      overrideAccess: false,
+      depth: 2,
+      limit,
+      where: {
+        and: [{ _status: { equals: 'published' } }, { featuredInVideoShowcase: { equals: true } }],
+      },
+    })
+
+    return docs
+  },
+  ['storefront-video-showcase'],
+  { revalidate: 3600, tags: [CACHE_TAGS.products] },
 )
 
 /**
@@ -265,18 +350,19 @@ export const getCachedCategoryNav = unstable_cache(
  *
  * Shoppers type "creme" or "serum", not "Crème" or "Sérum". Postgres ILIKE is
  * accent-sensitive (and cannot search the richText `description` at all), so for
- * a catalogue of this size we keep a short-lived in-memory index and match on a
+ * a catalogue of this size we keep a short-lived search index and match on a
  * normalised string instead. Falls back to a plain query for huge catalogues.
+ *
+ * The index lives in Next's data cache rather than in module state: on Vercel
+ * each serverless instance used to rebuild it independently, so a cold start
+ * paid the full catalogue query before it could answer one keystroke.
  */
-const SEARCH_INDEX_TTL = 60_000
 const SEARCH_INDEX_MAX = 2000
 
 type SearchIndexItem = {
   product: ProductCardProduct
   haystack: string
 }
-
-let searchIndex: { builtAt: number; items: SearchIndexItem[] } | null = null
 
 export function normalizeForSearch(value: string): string {
   return value
@@ -286,50 +372,49 @@ export function normalizeForSearch(value: string): string {
     .trim()
 }
 
-async function getSearchIndex(payload: Payload): Promise<SearchIndexItem[]> {
-  if (searchIndex && Date.now() - searchIndex.builtAt < SEARCH_INDEX_TTL) {
-    return searchIndex.items
-  }
+const getSearchIndex = unstable_cache(
+  async (): Promise<SearchIndexItem[]> => {
+    const payload = await getPayload({ config })
 
-  const { docs, totalDocs } = await payload.find({
-    collection: 'products',
-    draft: false,
-    overrideAccess: false,
-    depth: 1,
-    limit: SEARCH_INDEX_MAX,
-    pagination: false,
-    sort: '-createdAt',
-    select: productCardSelect,
-    where: publishedAndBuyable,
-  })
+    const { docs, totalDocs } = await payload.find({
+      collection: 'products',
+      draft: false,
+      overrideAccess: false,
+      depth: 1,
+      limit: SEARCH_INDEX_MAX,
+      pagination: false,
+      sort: '-createdAt',
+      select: productCardSelect,
+      where: publishedAndBuyable,
+    })
 
-  const items: SearchIndexItem[] = (docs as ProductCardProduct[]).filter(hasPhoto).map((product) => {
-    const brand = product.brand && typeof product.brand === 'object' ? product.brand.title : ''
-    return {
-      product,
-      haystack: normalizeForSearch(`${product.title} ${brand}`),
-    }
-  })
+    // A catalogue larger than the index window must go through the database.
+    if (totalDocs > SEARCH_INDEX_MAX) return []
 
-  // A catalogue larger than the index window must go through the database.
-  searchIndex = totalDocs > SEARCH_INDEX_MAX ? { builtAt: 0, items: [] } : { builtAt: Date.now(), items }
-
-  return searchIndex.items
-}
+    return (docs as ProductCardProduct[]).filter(hasPhoto).map((product) => {
+      const brand = product.brand && typeof product.brand === 'object' ? product.brand.title : ''
+      return {
+        product,
+        haystack: normalizeForSearch(`${product.title} ${brand}`),
+      }
+    })
+  },
+  ['storefront-search-index'],
+  { revalidate: 300, tags: [CACHE_TAGS.products] },
+)
 
 /**
  * Returns published products matching `query`, accent- and case-insensitively.
  * Multi-word queries match when every word is present.
  */
 export async function searchProductCatalog(
-  payload: Payload,
   query: string,
   limit = 8,
 ): Promise<ProductCardProduct[]> {
   const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean)
   if (terms.length === 0) return []
 
-  const index = await getSearchIndex(payload)
+  const index = await getSearchIndex()
   if (index.length === 0) return []
 
   const matches = index.filter((item) => terms.every((term) => item.haystack.includes(term)))

@@ -1,9 +1,8 @@
 import { Media } from '@/components/Media'
 import type { Media as MediaType } from '@/payload-types'
-import configPromise from '@payload-config'
+import { getCachedBrands } from '@/utilities/storefront'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getPayload } from 'payload'
 import React from 'react'
 
 export const metadata: Metadata = {
@@ -12,17 +11,12 @@ export const metadata: Metadata = {
   title: 'Nos marques | Formula K',
 }
 
+/** Prerendered; brand saves invalidate the `brands` tag immediately. */
+export const revalidate = 3600
+
 /** Brand directory. The brand name is always written in text, logo or not. */
 export default async function BrandsPage() {
-  const payload = await getPayload({ config: configPromise })
-
-  const { docs: brands, totalDocs } = await payload.find({
-    collection: 'brands',
-    sort: 'title',
-    depth: 1,
-    pagination: false,
-    limit: 200,
-  })
+  const { docs: brands, totalDocs } = await getCachedBrands(200)
 
   return (
     <div className="container my-10 pb-4 sm:my-16">

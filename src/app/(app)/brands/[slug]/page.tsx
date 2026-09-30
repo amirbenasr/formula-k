@@ -4,10 +4,9 @@ import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
 import { ProductPagination } from '@/components/ProductCard/Pagination'
 import { ProductGrid } from '@/components/ProductCard/ProductGrid'
 import type { Media as MediaType } from '@/payload-types'
-import configPromise from '@payload-config'
+import { getCachedBrandBySlug, getCachedCatalogProducts } from '@/utilities/catalog'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getPayload } from 'payload'
 import React from 'react'
 
 /** Products per page — three full rows of the 4-column grid. */
@@ -24,15 +23,7 @@ function first(value: string | string[] | undefined): string | undefined {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const payload = await getPayload({ config: configPromise })
-
-  const { docs } = await payload.find({
-    collection: 'brands',
-    where: { slug: { equals: slug } },
-    limit: 1,
-  })
-
-  const brand = docs[0]
+  const brand = await getCachedBrandBySlug(slug)
 
   if (!brand) {
     return { title: 'Marque introuvable | Formula K' }
@@ -54,16 +45,7 @@ export default async function BrandPage({ params, searchParams }: Props) {
   const requestedPage = Number.parseInt(first(search.page) ?? '1', 10)
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
-  const payload = await getPayload({ config: configPromise })
-
-  const { docs: brands } = await payload.find({
-    collection: 'brands',
-    where: { slug: { equals: slug } },
-    limit: 1,
-    depth: 1,
-  })
-
-  const brand = brands[0]
+  const brand = await getCachedBrandBySlug(slug)
 
   if (!brand) {
     notFound()
@@ -71,27 +53,11 @@ export default async function BrandPage({ params, searchParams }: Props) {
 
   const logo = brand.logo as MediaType | null
 
-  const products = await payload.find({
-    collection: 'products',
-    draft: false,
-    overrideAccess: false,
-    limit: PAGE_SIZE,
+  const products = await getCachedCatalogProducts({
     page,
-    select: {
-      title: true,
-      slug: true,
-      brand: true,
-      gallery: true,
-      priceInUSD: true,
-      inventory: true,
-      enableVariants: true,
-      variants: true,
-      createdAt: true,
-    },
-    ...(sort ? { sort } : { sort: 'title' }),
-    where: {
-      and: [{ _status: { equals: 'published' } }, { brand: { equals: brand.id } }],
-    },
+    pageSize: PAGE_SIZE,
+    sort,
+    brandID: brand.id,
   })
 
   const totalDocs = products.totalDocs

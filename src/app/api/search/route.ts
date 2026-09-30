@@ -1,6 +1,4 @@
 import { searchProductCatalog } from '@/utilities/storefront'
-import config from '@payload-config'
-import { getPayload } from 'payload'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +14,8 @@ type SearchResult = {
 
 /**
  * Lightweight product search used by the header type-ahead.
- * Public read-only: access control is enforced with `overrideAccess: false`.
+ * Public read-only: access control is enforced with `overrideAccess: false`
+ * inside the cached catalogue index.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -27,9 +26,7 @@ export async function GET(request: Request) {
     return Response.json({ results: [] as SearchResult[] })
   }
 
-  const payload = await getPayload({ config })
-
-  const products = await searchProductCatalog(payload, query, limit)
+  const products = await searchProductCatalog(query, limit)
 
   const results: SearchResult[] = products.map((product) => {
     const image = product.gallery?.[0]?.image

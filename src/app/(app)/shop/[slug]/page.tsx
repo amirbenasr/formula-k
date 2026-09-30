@@ -1,10 +1,9 @@
 import { ProductCard, type ProductCardProduct } from '@/components/ProductCard'
 import { ProductPagination } from '@/components/ProductCard/Pagination'
 import { ProductGrid } from '@/components/ProductCard/ProductGrid'
-import configPromise from '@payload-config'
+import { getCachedCatalogProducts, getCachedCategoryBySlug } from '@/utilities/catalog'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getPayload } from 'payload'
 import React from 'react'
 
 type Props = {
@@ -21,15 +20,7 @@ function first(value: string | string[] | undefined): string | undefined {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const payload = await getPayload({ config: configPromise })
-
-  const { docs } = await payload.find({
-    collection: 'categories',
-    where: { slug: { equals: slug } },
-    limit: 1,
-  })
-
-  const category = docs[0]
+  const category = await getCachedCategoryBySlug(slug)
 
   if (!category) {
     return { title: 'Catégorie introuvable | Formula K' }
@@ -50,73 +41,18 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const requestedPage = Number.parseInt(first(search.page) ?? '1', 10)
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
-  const payload = await getPayload({ config: configPromise })
-
-  const { docs: categories } = await payload.find({
-    collection: 'categories',
-    where: { slug: { equals: slug } },
-    limit: 1,
-  })
-
-  const category = categories[0]
+  const category = await getCachedCategoryBySlug(slug)
 
   if (!category) {
     notFound()
   }
 
-  const products = await payload.find({
-    collection: 'products',
-    draft: false,
-    overrideAccess: false,
-    limit: PAGE_SIZE,
+  const products = await getCachedCatalogProducts({
     page,
-    select: {
-      title: true,
-      slug: true,
-      brand: true,
-      gallery: true,
-      categories: true,
-      priceInUSD: true,
-      inventory: true,
-      enableVariants: true,
-      variants: true,
-      createdAt: true,
-    },
-    ...(sort ? { sort } : { sort: 'title' }),
-    where: {
-      and: [
-        {
-          _status: {
-            equals: 'published',
-          },
-        },
-        {
-          categories: {
-            contains: category.id,
-          },
-        },
-        ...(searchValue
-          ? [
-              {
-                // `description` is richText (jsonb) and cannot be matched with
-                // `like` on Postgres — search the title and brand instead.
-                or: [
-                  {
-                    title: {
-                      like: searchValue,
-                    },
-                  },
-                  {
-                    'brand.title': {
-                      like: searchValue,
-                    },
-                  },
-                ],
-              },
-            ]
-          : []),
-      ],
-    },
+    pageSize: PAGE_SIZE,
+    sort,
+    search: searchValue,
+    categoryID: category.id,
   })
 
   const totalDocs = products.totalDocs

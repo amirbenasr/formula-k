@@ -1,11 +1,15 @@
 import type { GlobalConfig } from 'payload'
 
 import { link } from '@/fields/link'
+import { createGlobalRevalidateHook } from '@/hooks/revalidateStorefront'
 
 export const Footer: GlobalConfig = {
   slug: 'footer',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [createGlobalRevalidateHook('footer')],
   },
   fields: [
     {
