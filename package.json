@@ -30,6 +30,8 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@ai-sdk/deepseek": "^3.0.57",
+    "@ai-sdk/react": "^4.0.126",
     "@payloadcms/admin-bar": "3.72.0",
     "@payloadcms/db-postgres": "3.72.0",
     "@payloadcms/email-nodemailer": "3.72.0",
@@ -37,6 +39,7 @@
     "@payloadcms/next": "3.72.0",
     "@payloadcms/plugin-ecommerce": "3.72.0",
     "@payloadcms/plugin-form-builder": "3.72.0",
+    "@payloadcms/plugin-mcp": "3.72.0",
     "@payloadcms/plugin-seo": "3.72.0",
     "@payloadcms/richtext-lexical": "3.72.0",
     "@payloadcms/storage-s3": "3.72.0",
@@ -50,6 +53,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@stripe/react-stripe-js": "^3",
     "@stripe/stripe-js": "^4.0.0",
+    "ai": "^7.0.123",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cross-env": "^7.0.3",
@@ -73,7 +77,8 @@
     "sonner": "^1.7.2",
     "stripe": "18.5.0",
     "tailwind-merge": "^2.3.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -114,7 +119,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "@modelcontextprotocol/sdk": "^1.26.0"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx}": [

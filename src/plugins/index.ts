@@ -90,6 +90,24 @@ const s3StoragePlugin: Plugin = s3Storage({
   enabled: isR2Enabled,
 })
 
+/**
+ * NOTE ON THE MCP PLUGIN (@payloadcms/plugin-mcp)
+ *
+ * It is installed and version-matched to Payload 3.72.0, but deliberately NOT
+ * registered here. Registering it adds a second auth-enabled collection
+ * (`payload-mcp-api-keys`), which widens `req.user` from `User` to
+ * `(User & { collection: 'users' }) | (PayloadMcpApiKey & { collection: 'payload-mcp-api-keys' })`.
+ * That breaks the type signature of every access helper in `src/access/` and the
+ * rewards routes, because they all assume a single user shape.
+ *
+ * The plugin adds that collection even when `disabled: true` — by design, so the
+ * database schema stays stable for migrations — so there is no way to register it
+ * "off" without the type widening.
+ *
+ * To enable MCP later, the access helpers must be narrowed by collection first
+ * (e.g. `if (user?.collection !== 'users') return false` before `checkRole`).
+ * See docs/admin-ai-assistant.md.
+ */
 export const plugins: Plugin[] = [
   s3StoragePlugin,
   seoPlugin({

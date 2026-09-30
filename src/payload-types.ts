@@ -80,6 +80,7 @@ export interface Config {
     'reward-tiers': RewardTier;
     'reward-transactions': RewardTransaction;
     'rewards-catalog': RewardsCatalog;
+    'ai-action-logs': AiActionLog;
     forms: Form;
     'form-submissions': FormSubmission;
     addresses: Address;
@@ -117,6 +118,7 @@ export interface Config {
     'reward-tiers': RewardTiersSelect<false> | RewardTiersSelect<true>;
     'reward-transactions': RewardTransactionsSelect<false> | RewardTransactionsSelect<true>;
     'rewards-catalog': RewardsCatalogSelect<false> | RewardsCatalogSelect<true>;
+    'ai-action-logs': AiActionLogsSelect<false> | AiActionLogsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     addresses: AddressesSelect<false> | AddressesSelect<true>;
@@ -1258,6 +1260,57 @@ export interface RewardsCatalog {
   createdAt: string;
 }
 /**
+ * Audit trail of every change proposed by the admin AI assistant, and whether it was applied.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-action-logs".
+ */
+export interface AiActionLog {
+  id: number;
+  /**
+   * One-line description of the proposed change.
+   */
+  summary: string;
+  /**
+   * Which assistant tool produced this proposal.
+   */
+  toolName: string;
+  status: 'pending' | 'applied' | 'failed' | 'cancelled';
+  conversationId?: string | null;
+  requestedBy: number | User;
+  /**
+   * Planned row-level changes, captured before anything is written.
+   */
+  changes?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * What was actually written once the change was applied.
+   */
+  result?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Failure detail when status is "failed".
+   */
+  error?: string | null;
+  appliedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
@@ -1329,6 +1382,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'rewards-catalog';
         value: number | RewardsCatalog;
+      } | null)
+    | ({
+        relationTo: 'ai-action-logs';
+        value: number | AiActionLog;
       } | null)
     | ({
         relationTo: 'forms';
@@ -1727,6 +1784,23 @@ export interface RewardsCatalogSelect<T extends boolean = true> {
   validFrom?: T;
   validUntil?: T;
   order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-action-logs_select".
+ */
+export interface AiActionLogsSelect<T extends boolean = true> {
+  summary?: T;
+  toolName?: T;
+  status?: T;
+  conversationId?: T;
+  requestedBy?: T;
+  changes?: T;
+  result?: T;
+  error?: T;
+  appliedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
