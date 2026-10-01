@@ -150,6 +150,32 @@ After that, merges to `main` keep it current on their own.
 
 ---
 
+## Environment-dependent schemas (the storage plugin trap)
+
+A plugin can add fields to a collection. If the plugin's *enablement* depends on
+environment variables, then the **schema** depends on environment variables too —
+and the CI drift check runs without production's secrets, so it cannot see the
+difference:
+
+1. Production has `R2_*` credentials, so `@payloadcms/storage-s3` is enabled and
+   injects `_objectKey` and `prefix` into `media` (Payload 3.90 added `_objectKey`).
+2. Local development, and the CI `verify` job, have no usable `R2_*` values, so the
+   plugin is off and the collection has neither field.
+3. `pnpm db:migrate:create` therefore writes a migration that *omits* both columns
+   and the drift check reports "no schema changes" — while every media read in
+   production fails with `column "_objectkey" does not exist` (Postgres 42703).
+
+The fix is `alwaysInsertFields: true` in
+[src/plugins/index.ts](../src/plugins/index.ts): the fields are inserted whether or
+not the plugin is enabled, so the config, the migrations, the drift check and
+`payload-types.ts` agree in every environment. It does not turn S3 on —
+`enabled: false` still keeps uploads on local disk.
+
+**Rule: whenever a plugin is toggled by env vars, check whether it also changes the
+collection schema, and pin the schema so it does not move with the toggle.**
+
+---
+
 ## Two rules worth remembering
 
 1. **Never hand-edit an applied migration.** Payload stores a checksum-verified
