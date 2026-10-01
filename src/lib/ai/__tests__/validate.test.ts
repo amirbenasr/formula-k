@@ -204,7 +204,7 @@ describe('normalizeProductFields', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    expect(result.result.diffs.map((diff) => diff.label)).toEqual(['Stock', 'Price (USD)', 'Title'])
+    expect(result.result.diffs.map((diff) => diff.label)).toEqual(['Stock', 'Price (TND)', 'Title'])
   })
 })
 

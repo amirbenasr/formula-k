@@ -14,6 +14,7 @@ import { isDocumentOwner } from '@/access/isDocumentOwner'
 import { ProductsCollection } from '@/collections/Products'
 import { Page, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
+import { tndAdminPricesPlugin } from './tndAdminPrices'
 
 const generateTitle: GenerateTitle<Product | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Formula K` : 'Formula K — K-Beauty en Tunisie'
@@ -186,4 +187,10 @@ export const plugins: Plugin[] = [
       productsCollectionOverride: ProductsCollection,
     },
   }),
+  /**
+   * Must stay last: it rewrites the money fields the plugin above creates so the
+   * admin shows and edits dinars instead of USD cents. See the file for why the
+   * columns keep their `priceInUSD` names.
+   */
+  tndAdminPricesPlugin,
 ]
