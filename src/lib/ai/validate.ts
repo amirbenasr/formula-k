@@ -267,7 +267,7 @@ export const PRODUCT_RULES: Record<keyof ProductFieldInput, FieldRule> = {
   },
   gallery: { key: 'gallery', label: 'Gallery', validate: asIdList },
   inventory: { key: 'inventory', label: 'Stock', validate: asStock },
-  price: { key: 'priceInUSD', label: 'Price (USD)', validate: asMoney },
+  price: { key: 'priceInUSD', label: 'Price (TND)', validate: asMoney },
   slug: { key: 'slug', label: 'Slug', validate: asSlug },
   status: { key: '_status', label: 'Status', validate: asStatus },
   title: { key: 'title', label: 'Title', validate: asText },

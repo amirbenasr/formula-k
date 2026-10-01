@@ -358,6 +358,9 @@ export interface Product {
     totalDocs?: number;
   };
   priceInUSDEnabled?: boolean | null;
+  /**
+   * The price customers pay, in Tunisian dinars (DT). Also used for sorting and filtering products; with variants enabled, enter the lowest or average price, as the variant price is used at checkout.
+   */
   priceInUSD?: number | null;
   relatedProducts?: (number | Product)[] | null;
   /**
@@ -975,6 +978,9 @@ export interface Variant {
   options: (number | VariantOption)[];
   inventory?: number | null;
   priceInUSDEnabled?: boolean | null;
+  /**
+   * The price customers pay, in Tunisian dinars (DT). Also used for sorting and filtering products; with variants enabled, enter the lowest or average price, as the variant price is used at checkout.
+   */
   priceInUSD?: number | null;
   updatedAt: string;
   createdAt: string;
