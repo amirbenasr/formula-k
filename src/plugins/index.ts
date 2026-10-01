@@ -87,7 +87,28 @@ const s3StoragePlugin: Plugin = s3Storage({
     },
     region: 'auto',
   },
+  /**
+   * Keep the storage plugin's columns in the collection schema even when the
+   * plugin is switched off.
+   *
+   * `enabled` is environment-dependent (only production has real R2 credentials),
+   * and the plugin injects its own fields — `_objectKey` and `prefix` — into the
+   * upload collection. Before this flag, those fields existed only where the
+   * plugin was on, which made the *schema* environment-dependent: local dev and
+   * CI built `media` without `_objectkey`, so the migration generated from that
+   * config did not add the column either, while production (plugin on) selected
+   * `media._objectkey` on every read and died with `column "_objectkey" does not
+   * exist` (Postgres 42703). Payload 3.90 introduced the `_objectKey` field, which
+   * is why this only started failing after the upgrade.
+   *
+   * With `alwaysInsertFields: true` both branches produce identical fields, so
+   * migrations, the CI drift check and `payload-types.ts` all match production
+   * regardless of which env vars happen to be set. It does not enable S3:
+   * `enabled: false` still leaves uploads on local disk. Payload v4 makes this
+   * the default.
+   */
   enabled: isR2Enabled,
+  alwaysInsertFields: true,
 })
 
 /**
