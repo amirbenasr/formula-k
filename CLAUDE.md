@@ -31,6 +31,7 @@ pnpm test:int              # vitest int project
 pnpm test:e2e              # playwright
 pnpm scrape:anua           # scripts/scrape-anua.ts
 pnpm import:products       # scripts/import-to-payload.ts
+pnpm smtp:check            # send a real test email to prove SMTP_* works
 ```
 
 ## Layout
@@ -84,7 +85,7 @@ src/
 
 ## Environment
 
-Required for full functionality: `DATABASE_URL` (Postgres, SSL enforced), `PAYLOAD_SECRET`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM_ADDRESS`/`SMTP_FROM_NAME`. Optional: `R2_BUCKET`/`R2_ENDPOINT`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` (enables S3/R2 media storage).
+Required for full functionality: `DATABASE_URL` (Postgres, SSL enforced), `PAYLOAD_SECRET`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM_ADDRESS`/`SMTP_FROM_NAME`. SMTP provider is Resend (`smtp.resend.com:465`, user `resend`, password = API key); `secure` is derived from the port, override with `SMTP_SECURE`. Verify credentials with `pnpm smtp:check`. Optional: `R2_BUCKET`/`R2_ENDPOINT`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY` (enables S3/R2 media storage).
 
 ## See also
 

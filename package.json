@@ -16,6 +16,7 @@
     "create:laneige": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/stock/create-laneige-products.ts",
     "import:products": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/import-to-payload.ts",
     "setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/setup.ts",
+    "smtp:check": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/check-smtp.ts",
     "seed:demo": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-demo.ts",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",

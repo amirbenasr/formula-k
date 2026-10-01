@@ -26,11 +26,20 @@ import { adminAiChatEndpoint } from '@/endpoints/adminAi/chat'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
+import { getSmtpConfig, SMTP_SETUP_HINT } from '@/utilities/smtp'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { plugins } from './plugins'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+const smtp = getSmtpConfig()
+
+if (!smtp.configured) {
+  console.warn(
+    `[email] SMTP is not configured — email verification and password reset links will NOT be sent. ${SMTP_SETUP_HINT}`,
+  )
+}
 
 export default buildConfig({
   admin: {
@@ -125,17 +134,13 @@ export default buildConfig({
     },
   }),
   email: nodemailerAdapter({
-    defaultFromAddress: process.env.SMTP_FROM_ADDRESS || 'cs@formula-k.tn',
-    defaultFromName: process.env.SMTP_FROM_NAME || 'Formula K',
-    transportOptions: {
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    },
+    defaultFromAddress: smtp.defaultFromAddress,
+    defaultFromName: smtp.defaultFromName,
+    // With SMTP unset there is nothing to connect to, and verifying only
+    // produces a misleading "Error verifying Nodemailer transport" on every
+    // boot and HMR reload. The warning above explains what is actually missing.
+    skipVerify: !smtp.configured,
+    transportOptions: smtp.transportOptions,
   }),
   // The admin AI assistant. Both routes enforce admin auth in their handlers,
   // because Payload custom endpoints are unauthenticated by default.
