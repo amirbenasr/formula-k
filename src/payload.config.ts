@@ -49,7 +49,7 @@ export default buildConfig({
       beforeDashboard: ['@/components/BeforeDashboard#BeforeDashboard'],
       graphics: {
         Logo: '@/components/Logo/Logo#Logo',
-        Icon: '@/components/Logo/Logo#Logo',
+        Icon: '@/components/Logo/Logo#Icon',
       },
       // A custom AdminViewConfig has no `navLink` property, so the sidebar entry
       // is contributed separately via afterNavLinks above.

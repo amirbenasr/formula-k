@@ -22,6 +22,7 @@ import { VariantOptionsSelector as VariantOptionsSelector_b91672ccd6e8b071c11142
 import { TNDPriceCell as TNDPriceCell_ba391b48033961a0a39abb1e70cb169a } from '@/components/admin/TNDPriceCell'
 import { TNDPriceInput as TNDPriceInput_dae864e795c29fe64cf554af91bb3d89 } from '@/components/admin/TNDPriceInput'
 import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { Icon as Icon_a0bd5f2fa532ef2166f77171a2b9828a } from '@/components/Logo/Logo'
 import { Logo as Logo_a0bd5f2fa532ef2166f77171a2b9828a } from '@/components/Logo/Logo'
 import { AIAssistantNavLink as AIAssistantNavLink_42ffa71536783ff9ad01a6d0460db33f } from '@/components/AIAssistant/NavLink'
 import { BeforeDashboard as BeforeDashboard_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
@@ -56,6 +57,7 @@ export const importMap = {
   "@/components/admin/TNDPriceCell#TNDPriceCell": TNDPriceCell_ba391b48033961a0a39abb1e70cb169a,
   "@/components/admin/TNDPriceInput#TNDPriceInput": TNDPriceInput_dae864e795c29fe64cf554af91bb3d89,
   "@payloadcms/richtext-lexical/client#HorizontalRuleFeatureClient": HorizontalRuleFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@/components/Logo/Logo#Icon": Icon_a0bd5f2fa532ef2166f77171a2b9828a,
   "@/components/Logo/Logo#Logo": Logo_a0bd5f2fa532ef2166f77171a2b9828a,
   "@/components/AIAssistant/NavLink#AIAssistantNavLink": AIAssistantNavLink_42ffa71536783ff9ad01a6d0460db33f,
   "@/components/BeforeDashboard#BeforeDashboard": BeforeDashboard_1a7510af427896d367a49dbf838d2de6,
