@@ -1,0 +1,130 @@
+/**
+ * Uses `--style-radius-*` and `--theme-*`, which Payload actually defines (see
+ * `@payloadcms/ui/scss/app.scss` and `colors.scss`). The `--border-radius-m`
+ * spelling in the AI assistant's stylesheet is not a Payload variable, so those
+ * corners are silently square.
+ *
+ * Deliberately no `@import '~@payloadcms/ui/scss'`: this file needs only nesting
+ * and Payload's CSS variables, so it compiles standalone.
+ */
+.competitor-prices {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.75);
+  margin-bottom: calc(var(--base) * 1.5);
+  max-width: 1100px;
+
+  &__header {
+    align-items: flex-start;
+    display: flex;
+    gap: var(--base);
+    justify-content: space-between;
+  }
+
+  &__title {
+    margin: 0 0 calc(var(--base) / 4);
+  }
+
+  &__hint,
+  &__footer {
+    color: var(--theme-elevation-600);
+    margin: 0;
+  }
+
+  &__ours {
+    margin: 0;
+  }
+
+  &__warning {
+    color: var(--theme-error-500);
+    font-weight: 600;
+  }
+
+  &__error,
+  &__notice {
+    border-radius: var(--style-radius-m);
+    margin: 0;
+    padding: calc(var(--base) / 2) calc(var(--base) * 0.75);
+  }
+
+  &__error {
+    background: var(--theme-error-100);
+    border: 1px solid var(--theme-error-300);
+  }
+
+  &__notice {
+    background: var(--theme-elevation-50);
+    border: 1px solid var(--theme-elevation-150);
+  }
+
+  &__table {
+    border-collapse: collapse;
+    width: 100%;
+
+    th,
+    td {
+      border-bottom: 1px solid var(--theme-elevation-150);
+      padding: calc(var(--base) / 2);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--theme-elevation-600);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+  }
+
+  &__row {
+    &--cheapest td:first-child::after {
+      background: var(--theme-success-100);
+      border-radius: var(--style-radius-s);
+      color: var(--theme-success-750);
+      content: 'cheapest';
+      font-size: 0.7rem;
+      margin-left: calc(var(--base) / 3);
+      padding: 0 calc(var(--base) / 4);
+      text-transform: uppercase;
+    }
+
+    &--cheaper td:first-child {
+      box-shadow: inset 3px 0 0 var(--theme-error-400);
+    }
+  }
+
+  &__flag {
+    background: var(--theme-elevation-100);
+    border-radius: var(--style-radius-s);
+    color: var(--theme-elevation-600);
+    display: inline-block;
+    font-size: 0.7rem;
+    margin-left: calc(var(--base) / 3);
+    padding: 0 calc(var(--base) / 4);
+    text-transform: uppercase;
+  }
+
+  &__listing {
+    color: var(--theme-elevation-700);
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__price {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &__previous {
+    color: var(--theme-elevation-500);
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  &__delta {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

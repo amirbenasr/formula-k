@@ -7,6 +7,8 @@
  */
 
 /**
+ * Cancelling or refunding an order puts its items back in stock. Reopening the order takes them out again.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "OrderStatus".
  */
@@ -81,6 +83,7 @@ export interface Config {
     'reward-transactions': RewardTransaction;
     'rewards-catalog': RewardsCatalog;
     'ai-action-logs': AiActionLog;
+    'competitor-prices': CompetitorPrice;
     forms: Form;
     'form-submissions': FormSubmission;
     addresses: Address;
@@ -119,6 +122,7 @@ export interface Config {
     'reward-transactions': RewardTransactionsSelect<false> | RewardTransactionsSelect<true>;
     'rewards-catalog': RewardsCatalogSelect<false> | RewardsCatalogSelect<true>;
     'ai-action-logs': AiActionLogsSelect<false> | AiActionLogsSelect<true>;
+    'competitor-prices': CompetitorPricesSelect<false> | CompetitorPricesSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     addresses: AddressesSelect<false> | AddressesSelect<true>;
@@ -1317,6 +1321,70 @@ export interface AiActionLog {
   createdAt: string;
 }
 /**
+ * Prices competitors charge for the same product. Filled in from Google search on the product edit view, or by hand.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitor-prices".
+ */
+export interface CompetitorPrice {
+  id: number;
+  /**
+   * Generated from the competitor and the price.
+   */
+  label?: string | null;
+  /**
+   * The Formula K product this price competes with.
+   */
+  product: number | Product;
+  /**
+   * Competitor domain, e.g. `mytek.tn`. One row per competitor per product.
+   */
+  source: string;
+  /**
+   * The competitor's own listing title, as Google reported it.
+   */
+  title?: string | null;
+  /**
+   * Link to the competitor listing.
+   */
+  url?: string | null;
+  /**
+   * In Tunisian dinars, the same way our own prices are stored.
+   */
+  competitorPrice: number;
+  /**
+   * The price exactly as it appeared in the search result, for auditing.
+   */
+  rawPriceText?: string | null;
+  /**
+   * What this competitor charged the time before. Set automatically.
+   */
+  previousPrice?: number | null;
+  /**
+   * When the competitor last changed their price.
+   */
+  priceChangedAt?: string | null;
+  /**
+   * How sure the search is that this listing is the same product. "Uncertain" rows are worth checking before repricing anything.
+   */
+  matchConfidence?: ('exact' | 'likely' | 'uncertain') | null;
+  /**
+   * Tick to hide a row that matched the wrong product, without deleting it.
+   */
+  ignored?: boolean | null;
+  /**
+   * When this price was last seen.
+   */
+  fetchedAt?: string | null;
+  fetchMethod?: ('serpapi' | 'manual') | null;
+  /**
+   * Anything worth remembering about this price.
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "form-submissions".
  */
@@ -1392,6 +1460,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'ai-action-logs';
         value: number | AiActionLog;
+      } | null)
+    | ({
+        relationTo: 'competitor-prices';
+        value: number | CompetitorPrice;
       } | null)
     | ({
         relationTo: 'forms';
@@ -1811,6 +1883,28 @@ export interface AiActionLogsSelect<T extends boolean = true> {
   result?: T;
   error?: T;
   appliedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitor-prices_select".
+ */
+export interface CompetitorPricesSelect<T extends boolean = true> {
+  label?: T;
+  product?: T;
+  source?: T;
+  title?: T;
+  url?: T;
+  competitorPrice?: T;
+  rawPriceText?: T;
+  previousPrice?: T;
+  priceChangedAt?: T;
+  matchConfidence?: T;
+  ignored?: T;
+  fetchedAt?: T;
+  fetchMethod?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

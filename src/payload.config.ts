@@ -17,12 +17,14 @@ import { fileURLToPath } from 'url'
 import { AiActionLog } from '@/collections/AiActionLog'
 import { Brands } from '@/collections/Brands'
 import { Categories } from '@/collections/Categories'
+import { CompetitorPrices } from '@/collections/CompetitorPrices'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Users } from '@/collections/Users'
 import { RewardTiers, RewardTransactions, RewardsCatalog } from '@/collections/Rewards'
 import { adminAiApplyEndpoint } from '@/endpoints/adminAi/apply'
 import { adminAiChatEndpoint } from '@/endpoints/adminAi/chat'
+import { competitorPricesFetchEndpoint } from '@/endpoints/competitorPrices/fetch'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
@@ -78,6 +80,7 @@ export default buildConfig({
     RewardTransactions,
     RewardsCatalog,
     AiActionLog,
+    CompetitorPrices,
   ],
   db: postgresAdapter({
     pool: {
@@ -142,9 +145,10 @@ export default buildConfig({
     skipVerify: !smtp.configured,
     transportOptions: smtp.transportOptions,
   }),
-  // The admin AI assistant. Both routes enforce admin auth in their handlers,
-  // because Payload custom endpoints are unauthenticated by default.
-  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint],
+  // The admin AI assistant and the competitor price lookup. All of these
+  // enforce admin auth in their handlers, because Payload custom endpoints are
+  // unauthenticated by default.
+  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint, competitorPricesFetchEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
