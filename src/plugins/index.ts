@@ -11,6 +11,7 @@ import { adminOrPublishedStatus } from '@/access/adminOrPublishedStatus'
 import { customerOnlyFieldAccess } from '@/access/customerOnlyFieldAccess'
 import { isAdmin } from '@/access/isAdmin'
 import { isDocumentOwner } from '@/access/isDocumentOwner'
+import { OrdersCollection } from '@/collections/Orders'
 import { ProductsCollection } from '@/collections/Products'
 import { Page, Product } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -180,6 +181,14 @@ export const plugins: Plugin[] = [
     },
     customers: {
       slug: 'users',
+    },
+    /**
+     * The plugin's `orders` collection has no hooks; this override adds the one
+     * that puts stock back when an order is cancelled or refunded (and takes it
+     * out again if the order is reopened). See `src/collections/Orders`.
+     */
+    orders: {
+      ordersCollectionOverride: OrdersCollection,
     },
     // Online payments disabled - using Cash on Delivery only
     payments: undefined,

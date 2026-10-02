@@ -68,6 +68,13 @@ export async function POST(request: NextRequest) {
     })
 
     // Create the order
+    //
+    // Stock is moved by the `orders` collection itself, not here: the
+    // `afterChange` hook in `src/collections/Orders` reserves one unit per ordered
+    // quantity and gives it back when the order is later cancelled or refunded.
+    // Keeping the deduction out of this route is what makes the two directions
+    // symmetric — every order that reserves stock through the hook is also one
+    // that can release it, however it was created.
     const order = await payload.create({
       collection: 'orders',
       data: {
@@ -80,30 +87,6 @@ export async function POST(request: NextRequest) {
         currency: 'USD',
       },
     })
-
-    // Update inventory
-    for (const item of cart.items) {
-      const product = typeof item.product === 'object' ? item.product : null
-      const variant = typeof item.variant === 'object' ? item.variant : null
-
-      if (variant && typeof variant.inventory === 'number') {
-        await payload.update({
-          collection: 'variants',
-          id: variant.id,
-          data: {
-            inventory: variant.inventory - item.quantity,
-          },
-        })
-      } else if (product && typeof product.inventory === 'number') {
-        await payload.update({
-          collection: 'products',
-          id: product.id,
-          data: {
-            inventory: product.inventory - item.quantity,
-          },
-        })
-      }
-    }
 
     // Mark cart as purchased
     await payload.update({
