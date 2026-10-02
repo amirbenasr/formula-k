@@ -1,4 +1,5 @@
 import { CompetitorSearchError } from './errors'
+import { enhanceSearchQuery } from './enhanceQuery'
 import { domainOf, parsePriceToTND, titleMatchScore } from './parse'
 import { buildSearchQuery, toSearchTerms } from './query'
 import { getSerpApiKey, googleSearch, type SerpApiOrganicResult } from './serpapi'
@@ -46,6 +47,8 @@ export type CompetitorSearchResult = {
   offers: CompetitorOffer[]
   /** The query that was sent, so the admin can run it themselves. */
   query: string
+  /** Whether a model rewrote the keywords before the search (see `enhanceQuery.ts`). */
+  queryEnhanced: boolean
   /** Organic results Google returned, before any filtering. */
   scanned: number
   /** Why the rest were discarded, by filter. */
@@ -148,6 +151,7 @@ export async function searchCompetitorPrices({
   }
 
   const domains = competitorDomains()
+  const strict = isStrict()
   // The title usually opens with the brand; when it does not, the brand is worth
   // adding, because a shop's listing may name the product differently.
   const searchInput = [productTitle, brand?.trim()].filter(Boolean).join(' ')
@@ -159,7 +163,13 @@ export async function searchCompetitorPrices({
     )
   }
 
-  const query = buildSearchQuery({ domains, strict: isStrict(), title: searchInput })
+  // The plain query is built first: it is what gets searched whenever the model
+  // has nothing to add, and the `site:` clause is rebuilt here rather than taken
+  // from the model, so query and post-filter keep agreeing. See `enhanceQuery.ts`
+  // for why the keywords are worth rewriting at all.
+  const plainQuery = buildSearchQuery({ domains, strict, title: searchInput })
+  const enhanced = await enhanceSearchQuery({ brand, title: productTitle })
+  const query = enhanced ? buildSearchQuery({ domains, strict, title: enhanced }) : plainQuery
 
   const response = await googleSearch({ apiKey, query })
   const results = response.organic_results ?? []
@@ -220,6 +230,7 @@ export async function searchCompetitorPrices({
   return {
     offers,
     query,
+    queryEnhanced: Boolean(enhanced),
     scanned: results.length,
     skipped,
     unpriced: unpriced.filter(({ source }) => !priced.has(source)),

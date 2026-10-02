@@ -35,6 +35,8 @@ type FetchResponse = {
   ok?: boolean
   /** The Google query that was actually sent. */
   query?: string
+  /** Whether the keywords in `query` were rewritten by AI before the search. */
+  queryEnhanced?: boolean
   scanned?: number
   /** Why results were discarded, by filter. */
   skipped?: { foreignDomain?: number; noPrice?: number; weakMatch?: number }
@@ -216,6 +218,7 @@ export const CompetitorPricesField = () => {
         <div className={`${baseClass}__diagnostics`}>
           <p className={`${baseClass}__query`}>
             Searched Google for <code>{lastCheck.query}</code>{' '}
+            {lastCheck.queryEnhanced && <em>(keywords rewritten by AI)</em>}{' '}
             <a
               href={`https://www.google.com/search?q=${encodeURIComponent(lastCheck.query)}`}
               rel="noopener noreferrer"

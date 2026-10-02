@@ -27,9 +27,32 @@ export function getDeepSeekApiKey(): string {
   return key
 }
 
+/**
+ * The cheapest model we can call, for mechanical rewriting rather than reasoning
+ * (see `competitorPrices/enhanceQuery.ts`).
+ *
+ * Deliberately a separate variable from `AI_MODEL`: pointing the admin assistant
+ * at a pro model should not also make every price lookup expensive. `deepseek-flash`
+ * is the cheapest alias the provider offers today.
+ */
+export const CHEAP_MODEL_ID = process.env.AI_CHEAP_MODEL || 'deepseek-flash'
+
 export function getChatModel(): LanguageModel {
   return createDeepSeek({ apiKey: getDeepSeekApiKey() })(AI_MODEL_ID)
 }
+
+export function getCheapModel(): LanguageModel {
+  return createDeepSeek({ apiKey: getDeepSeekApiKey() })(CHEAP_MODEL_ID)
+}
+
+/**
+ * Whether the DeepSeek key is configured at all.
+ *
+ * Callers that treat the model as an optional improvement — rather than the
+ * whole point of the request — check this first so a missing key silently
+ * degrades instead of throwing.
+ */
+export const hasDeepSeekApiKey = (): boolean => Boolean(process.env.DEEPSEEK_API_KEY?.trim())
 
 /**
  * DeepSeek V4-generation models (which includes the `deepseek-flash` alias)
@@ -50,8 +73,10 @@ export function getChatModel(): LanguageModel {
  * `@ai-sdk/provider-utils` is only a transitive dependency under pnpm's strict
  * layout, so the object is structurally compatible rather than nominally typed.
  */
-export function thinkingProviderOptions() {
-  const type = process.env.AI_THINKING === 'enabled' ? 'enabled' : 'disabled'
+export function thinkingProviderOptions(
+  override?: 'disabled' | 'enabled',
+) {
+  const type = override ?? (process.env.AI_THINKING === 'enabled' ? 'enabled' : 'disabled')
 
   return { deepseek: { thinking: { type } } }
 }
