@@ -80,6 +80,15 @@ describe('titleMatchScore', () => {
     expect(score).toBeGreaterThanOrEqual(0.9)
   })
 
+  it('treats 30ml and 30 ml as the same size', () => {
+    expect(
+      titleMatchScore(
+        'Anua Niacinamide Dark Spot Correcting Serum 30ml',
+        'Anua Niacinamide Dark Spot Correcting Serum 30 ml',
+      ),
+    ).toBe(1)
+  })
+
   it('scores an unrelated listing low', () => {
     const score = titleMatchScore(
       'COSRX Snail 96 Mucin Power Essence 100ml',

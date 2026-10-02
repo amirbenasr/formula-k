@@ -1,5 +1,6 @@
 import { CompetitorSearchError } from './errors'
 import { domainOf, parsePriceToTND, titleMatchScore } from './parse'
+import { buildSearchQuery, toSearchTerms } from './query'
 import { getSerpApiKey, googleSearch, type SerpApiOrganicResult } from './serpapi'
 
 /**
@@ -13,6 +14,12 @@ import { getSerpApiKey, googleSearch, type SerpApiOrganicResult } from './serpap
  *
  * Three filters, in order: the result must be a Tunisian shop, its listing must
  * look like our product, and a dinar price must be readable from the snippet.
+ *
+ * Every rejection is counted and reported. The first version of this returned
+ * "no Tunisian shop listed ... with a readable price" without saying which filter
+ * had done the rejecting, which made a bad *query* look like a parsing failure
+ * and cost a round trip to diagnose. The counts, the query and the shops that
+ * matched but stated no readable price are all handed back to the caller now.
  */
 
 export type MatchConfidence = 'exact' | 'likely' | 'uncertain'
@@ -28,10 +35,30 @@ export type CompetitorOffer = {
   url: string
 }
 
+/** An approved, matching listing whose price could not be read from the snippet. */
+export type UnpricedListing = {
+  source: string
+  title: string
+  url: string
+}
+
 export type CompetitorSearchResult = {
   offers: CompetitorOffer[]
+  /** The query that was sent, so the admin can run it themselves. */
+  query: string
   /** Organic results Google returned, before any filtering. */
   scanned: number
+  /** Why the rest were discarded, by filter. */
+  skipped: {
+    /** Not a Tunisian shop (or no usable URL). */
+    foreignDomain: number
+    /** No readable dinar price in the snippet. */
+    noPrice: number
+    /** Title too different — probably another product. */
+    weakMatch: number
+  }
+  /** The first few matching listings that stated no readable price. */
+  unpriced: UnpricedListing[]
 }
 
 /**
@@ -49,6 +76,9 @@ export const DEFAULT_COMPETITOR_DOMAINS = [
 
 /** Only the single best offer per competitor domain is kept. */
 const MAX_OFFERS = 8
+
+/** How many unpriced listings to hand back for the admin to open by hand. */
+const MAX_UNPRICED = 5
 
 /** Below this, the listing is probably a different product. */
 const MIN_MATCH_SCORE = 0.25
@@ -68,6 +98,9 @@ export function competitorDomains(): string[] {
     .filter(Boolean)
 }
 
+/** Only `COMPETITOR_DOMAINS` are accepted, instead of any `.tn` host. */
+export const isStrict = (): boolean => process.env.COMPETITOR_DOMAINS_STRICT === 'true'
+
 /**
  * True for a shop the admin is willing to be compared against.
  *
@@ -82,7 +115,7 @@ export function isCompetitorDomain(hostname: string): boolean {
     return true
   }
 
-  return process.env.COMPETITOR_DOMAINS_STRICT !== 'true' && host.endsWith('.tn')
+  return !isStrict() && host.endsWith('.tn')
 }
 
 /**
@@ -114,24 +147,42 @@ export async function searchCompetitorPrices({
     throw new CompetitorSearchError('This product has no title to search for.', 400)
   }
 
-  // The quoted title keeps Google on the exact product; `prix` nudges the
-  // snippets towards shop listings, which are the ones that state a price.
-  const query = [`"${productTitle}"`, brand?.trim(), 'prix'].filter(Boolean).join(' ')
+  const domains = competitorDomains()
+  // The title usually opens with the brand; when it does not, the brand is worth
+  // adding, because a shop's listing may name the product differently.
+  const searchInput = [productTitle, brand?.trim()].filter(Boolean).join(' ')
+
+  if (!toSearchTerms(searchInput)) {
+    throw new CompetitorSearchError(
+      'This product title contains no searchable words (Latin letters and digits only). Rename it, or look the price up by hand.',
+      400,
+    )
+  }
+
+  const query = buildSearchQuery({ domains, strict: isStrict(), title: searchInput })
 
   const response = await googleSearch({ apiKey, query })
   const results = response.organic_results ?? []
   const best = new Map<string, CompetitorOffer>()
+  const unpriced: UnpricedListing[] = []
+  const skipped = { foreignDomain: 0, noPrice: 0, weakMatch: 0 }
 
   for (const result of results) {
     const url = typeof result.link === 'string' ? result.link : null
     const source = url ? domainOf(url) : null
     const resultTitle = typeof result.title === 'string' ? result.title : ''
 
-    if (!url || !source || !isCompetitorDomain(source)) continue
+    if (!url || !source || !isCompetitorDomain(source)) {
+      skipped.foreignDomain += 1
+      continue
+    }
 
     const score = titleMatchScore(productTitle, resultTitle)
 
-    if (score < MIN_MATCH_SCORE) continue
+    if (score < MIN_MATCH_SCORE) {
+      skipped.weakMatch += 1
+      continue
+    }
 
     const text = [resultTitle, result.snippet, richSnippetText(result)]
       .filter((part): part is string => typeof part === 'string' && part.length > 0)
@@ -139,7 +190,13 @@ export async function searchCompetitorPrices({
 
     const parsed = parsePriceToTND(text, referencePrice)
 
-    if (!parsed) continue
+    if (!parsed) {
+      skipped.noPrice += 1
+
+      if (unpriced.length < MAX_UNPRICED) unpriced.push({ source, title: resultTitle, url })
+
+      continue
+    }
 
     const offer: CompetitorOffer = {
       confidence: confidenceFor(score),
@@ -157,7 +214,16 @@ export async function searchCompetitorPrices({
 
   const offers = [...best.values()].sort((a, b) => a.price - b.price).slice(0, MAX_OFFERS)
 
-  return { offers, scanned: results.length }
+  // A shop that yielded an offer should not also appear as an unpriced listing.
+  const priced = new Set(offers.map(({ source }) => source))
+
+  return {
+    offers,
+    query,
+    scanned: results.length,
+    skipped,
+    unpriced: unpriced.filter(({ source }) => !priced.has(source)),
+  }
 }
 
 /**
