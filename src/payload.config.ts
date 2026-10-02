@@ -24,7 +24,6 @@ import { Users } from '@/collections/Users'
 import { RewardTiers, RewardTransactions, RewardsCatalog } from '@/collections/Rewards'
 import { adminAiApplyEndpoint } from '@/endpoints/adminAi/apply'
 import { adminAiChatEndpoint } from '@/endpoints/adminAi/chat'
-import { competitorPricesFetchEndpoint } from '@/endpoints/competitorPrices/fetch'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
@@ -145,10 +144,15 @@ export default buildConfig({
     skipVerify: !smtp.configured,
     transportOptions: smtp.transportOptions,
   }),
-  // The admin AI assistant and the competitor price lookup. All of these
-  // enforce admin auth in their handlers, because Payload custom endpoints are
-  // unauthenticated by default.
-  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint, competitorPricesFetchEndpoint],
+  // The admin AI assistant. Both routes enforce admin auth in their handlers,
+  // because Payload custom endpoints are unauthenticated by default.
+  //
+  // NOTE: competitor price lookups are deliberately NOT here. Their first path
+  // segment would be the `competitor-prices` collection slug, and Payload
+  // resolves the segment as a slug before consulting root endpoints — so a root
+  // endpoint under a collection slug never matches. It is declared on the
+  // collection instead. See src/endpoints/competitorPrices/fetch.ts.
+  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',

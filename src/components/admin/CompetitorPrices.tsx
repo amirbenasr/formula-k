@@ -26,11 +26,22 @@ const baseClass = 'competitor-prices'
 type FetchResponse = {
   checkedAt?: string
   error?: string
+  /** Payload's own failure shape, e.g. `Route not found "..."`. */
+  errors?: { message?: string }[]
   found?: number
   message?: string
   ok?: boolean
   scanned?: number
 }
+
+/**
+ * Payload reports failures three different ways — our endpoint sets `error`, its
+ * missing-route handler sets `message`, and its error handler sets `errors[]`.
+ * Surfacing whichever is present beats showing a bare status code to an admin
+ * who cannot see the server logs.
+ */
+const describeFailure = (data: FetchResponse, status: number): string =>
+  data.error ?? data.message ?? data.errors?.[0]?.message ?? `The lookup failed (HTTP ${status}).`
 
 /** "2 days ago" — a price check is only meaningful with its age next to it. */
 const relativeTime = (iso: string): string => {
@@ -126,7 +137,7 @@ export const CompetitorPricesField = () => {
       const data = (await response.json()) as FetchResponse
 
       if (!response.ok || data.ok === false) {
-        setError(data.error ?? `The lookup failed (HTTP ${response.status}).`)
+        setError(describeFailure(data, response.status))
         return
       }
 

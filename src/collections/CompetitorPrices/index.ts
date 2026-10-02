@@ -1,5 +1,6 @@
 import { adminOnly } from '@/access/adminOnly'
 import { roundAmount } from '@/components/admin/tndPrice'
+import { competitorPricesFetchEndpoint } from '@/endpoints/competitorPrices/fetch'
 import type { CollectionConfig } from 'payload'
 
 /**
@@ -30,6 +31,13 @@ export const CompetitorPrices: CollectionConfig = {
     group: 'Content',
     useAsTitle: 'label',
   },
+  /**
+   * Declared here rather than in `payload.config.ts` on purpose: a root endpoint
+   * whose first path segment is this collection's slug is unreachable, because
+   * Payload resolves the segment as a slug and then only consults this
+   * collection's endpoints. See the endpoint file for the full explanation.
+   */
+  endpoints: [competitorPricesFetchEndpoint],
   fields: [
     {
       name: 'label',
