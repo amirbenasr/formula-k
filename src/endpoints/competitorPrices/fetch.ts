@@ -185,6 +185,10 @@ export const competitorPricesFetchEndpoint: Endpoint = {
       ok: true,
       ourPrice: ourPrice ?? null,
       query: outcome.query,
+      // Whether the keywords were rewritten by the cheap model before the search
+      // (see `lib/competitorPrices/enhanceQuery.ts`). Surfaced so a thin result
+      // set can be read against the query that actually produced it.
+      queryEnhanced: outcome.queryEnhanced,
       rows: saved,
       scanned: outcome.scanned,
       skipped: outcome.skipped,

@@ -21,6 +21,7 @@ POST /api/competitor-prices/fetch      src/endpoints/competitorPrices/fetch.ts
    ▼
 src/lib/competitorPrices/search.ts     filter → match → parse, one offer per domain
    │
+   ├─ src/lib/competitorPrices/enhanceQuery.ts   title → Google keywords (cheap DeepSeek model)
    ▼
 src/lib/competitorPrices/serpapi.ts    Google search (Tunisia, French)
    │
@@ -36,6 +37,7 @@ Key files:
 | --- | --- |
 | `src/lib/competitorPrices/parse.ts` | Price text → dinars, and title → match score. Pure, unit-tested |
 | `src/lib/competitorPrices/query.ts` | Product title → the Google query. Pure, unit-tested |
+| `src/lib/competitorPrices/enhanceQuery.ts` | Product title → better keywords, via the cheap DeepSeek model (optional) |
 | `src/lib/competitorPrices/search.ts` | Domain allow-list, confidence scoring, one offer per shop |
 | `src/lib/competitorPrices/serpapi.ts` | The only file that knows about the search provider |
 | `src/lib/competitorPrices/errors.ts` | Failures that read as sentences, with an HTTP status |
@@ -60,6 +62,10 @@ Optional:
 | --- | --- | --- |
 | `COMPETITOR_DOMAINS` | `jumia.com.tn,mytek.tn,tunisianet.com.tn,wiki.tn` | Domains treated as competitors |
 | `COMPETITOR_DOMAINS_STRICT` | `false` | `true` accepts only `COMPETITOR_DOMAINS`, instead of any `.tn` host |
+| `COMPETITOR_QUERY_ENHANCE` | `true` | `false` skips the AI keyword rewrite and always searches the plain query |
+
+The keyword rewrite (section 4a) needs `DEEPSEEK_API_KEY`, which the admin AI assistant also
+uses. Without it — or if the model call fails — lookups still run on the plain query.
 
 Any `*.tn` host is accepted by default, which is what makes the feature work on day one for
 the local beauty shops nobody thought to list. Set `COMPETITOR_DOMAINS_STRICT=true` to keep
@@ -130,6 +136,37 @@ diagnosed — and worked around by hand — instead of guessed at.
 
 If coverage still looks thin, the levers are `num` in `serpapi.ts` (currently 20) and adding
 `filter=0` to disable Google's omitted-similar-results filter.
+
+---
+
+## 4a. The keyword rewrite
+
+Before SerpAPI is called, the product title is sent to the **cheapest** DeepSeek model
+(`AI_CHEAP_MODEL`, defaulting to the `deepseek-flash` alias — kept separate from `AI_MODEL` so
+pointing the assistant at a pro model does not make every lookup expensive). Its only job is to
+turn
+
+```
+Anua Niacinamide Dark Spot Correcting Serum 30ml
+```
+
+into the keywords a Tunisian shopper would actually type — brand and identifying words kept,
+marketing filler dropped, French shop vocabulary (`prix`, `serum`, `visage`) added.
+
+**It can only improve the query, never replace it.** `search.ts` builds the plain query first
+and falls back to it whenever the rewrite is unavailable or unusable: no `DEEPSEEK_API_KEY`,
+`COMPETITOR_QUERY_ENHANCE=false`, an 8-second timeout, a provider error, or an answer that
+fails the checks below. Nothing about the feature breaks if the AI side is unconfigured.
+
+**The answer is not trusted.** `enhanceQuery.ts` keeps the first non-empty line, strips quotes
+and any `site:` the model invented — the shop filter has to keep mirroring `isCompetitorDomain`,
+and the model cannot know that rule — and rebuilds the query through `buildSearchQuery`, so the
+plain `prix … site:.tn` shape is unchanged. It then requires the rewrite to repeat at least two
+of the title's own distinctive words (four letters or more). `serum visage tunisie` is rejected;
+`anua serum 30ml` is not.
+
+The response carries `queryEnhanced`, and the tab marks the query it shows as *keywords rewritten
+by AI*, so a thin result set can be read against the query that actually produced it.
 
 ---
 
