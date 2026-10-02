@@ -14,9 +14,10 @@
  * returns 20+ Tunisian shops. So this module builds that query instead: plain
  * keywords, no quotes, the title's punctuation flattened to spaces, and a
  * `site:` filter that mirrors the same acceptance rule the caller post-filters
- * with. Query and filter have to agree — `site:` built from the *default* domain
- * list would exclude every other `.tn` shop that `isCompetitorDomain` happily
- * accepts, and the results would be thrown away for no reason.
+ * with. Query and filter have to agree — a `site:` built from a fixed list of
+ * competitor domains would exclude every other `.tn` shop that
+ * `isCompetitorDomain` happily accepts, and the results would be thrown away
+ * for no reason.
  */
 
 /**
@@ -57,13 +58,13 @@ export const toSearchTerms = (title: string): string =>
 /**
  * The `site:` clause, mirroring `isCompetitorDomain`.
  *
- * In strict mode only the configured domains are accepted, so only those are
- * searched. Otherwise any `.tn` host counts — which Google expresses as
- * `site:.tn` — plus any explicitly configured domain outside `.tn`, which the
- * `.tn` clause alone would have excluded.
+ * Any `.tn` host counts — which Google expresses as `site:.tn` — plus any
+ * domain outside `.tn` configured in `COMPETITOR_DOMAINS`, which the `.tn`
+ * clause alone would have excluded. There is no fixed list of competitors to
+ * narrow this down to: the whole local market is searched.
  */
-export const siteFilter = ({ domains, strict }: { domains: string[]; strict: boolean }): string => {
-  const parts = strict ? domains : ['.tn', ...domains.filter((domain) => !domain.endsWith('.tn'))]
+export const siteFilter = ({ domains }: { domains: string[] }): string => {
+  const parts = ['.tn', ...domains.filter((domain) => !domain.endsWith('.tn'))]
   const unique = [...new Set(parts.filter(Boolean))]
 
   if (unique.length === 0) return ''
@@ -74,13 +75,9 @@ export const siteFilter = ({ domains, strict }: { domains: string[]; strict: boo
 
 export const buildSearchQuery = ({
   domains,
-  strict,
   title,
 }: {
   domains: string[]
-  strict: boolean
   title: string
 }): string =>
-  [SEARCH_PREFIX, toSearchTerms(title), siteFilter({ domains, strict })]
-    .filter(Boolean)
-    .join(' ')
+  [SEARCH_PREFIX, toSearchTerms(title), siteFilter({ domains })].filter(Boolean).join(' ')
