@@ -7,6 +7,30 @@ import { APIError, type Endpoint } from 'payload'
 /**
  * Backs the "Check prices" button on the Competitor Prices tab.
  *
+ * WHY THIS IS A COLLECTION ENDPOINT AND NOT A ROOT ONE
+ *
+ * The obvious home for this is `config.endpoints` with `path: '/competitor-prices/fetch'`.
+ * That path is unreachable. `handleEndpoints` resolves the first path segment as a
+ * slug and then swaps the endpoint list out entirely:
+ *
+ * ```js
+ * // payload/dist/utilities/handleEndpoints.js
+ * const firstParam = segments[0]                       // "competitor-prices"
+ * if (payload.collections[firstParam]) collection = payload.collections[firstParam]
+ * let endpoints = config.endpoints                     // root endpoints live here...
+ * if (collection) endpoints = collection.config.endpoints  // ...but this replaces them
+ * ```
+ *
+ * Because a collection with that slug exists, Payload looks only at that
+ * collection's endpoints (its injected CRUD routes plus anything declared on the
+ * collection). A root endpoint under `/competitor-prices/...` is therefore never
+ * consulted and the request 404s. Declared on the collection as `/fetch`, the
+ * same request resolves against the collection's list and matches — so the public
+ * URL is unchanged at `POST /api/competitor-prices/fetch`.
+ *
+ * `src/endpoints/competitorPrices/__tests__/registration.test.ts` guards both this
+ * endpoint and the general rule.
+ *
  * Custom endpoints are unauthenticated by default, so this one starts by
  * requiring a signed-in admin — the same reasoning as `/api/admin-ai/chat`.
  * Every database call then runs as that admin with `overrideAccess: false`, so
@@ -19,7 +43,7 @@ import { APIError, type Endpoint } from 'payload'
  * which is how the table shows that a price is going stale.
  */
 export const competitorPricesFetchEndpoint: Endpoint = {
-  path: '/competitor-prices/fetch',
+  path: '/fetch',
   method: 'post',
   handler: async (req) => {
     const { user } = req
