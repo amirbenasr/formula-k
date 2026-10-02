@@ -64,19 +64,6 @@ export type CompetitorSearchResult = {
   unpriced: UnpricedListing[]
 }
 
-/**
- * Tunisian shops used when `COMPETITOR_DOMAINS` is not set. Mostly marketplaces
- * and electronics chains, because those are the local retailers that rank in
- * Google with a price in the snippet — the general-beauty shops are discovered
- * by the "any `.tn` host" rule below.
- */
-export const DEFAULT_COMPETITOR_DOMAINS = [
-  'jumia.com.tn',
-  'mytek.tn',
-  'tunisianet.com.tn',
-  'wiki.tn',
-]
-
 /** Only the single best offer per competitor domain is kept. */
 const MAX_OFFERS = 8
 
@@ -89,11 +76,19 @@ const MIN_MATCH_SCORE = 0.25
 const EXACT_SCORE = 0.6
 const LIKELY_SCORE = 0.4
 
-/** The domains to accept, from `COMPETITOR_DOMAINS` or the default list. */
+/**
+ * Extra domains to accept, from `COMPETITOR_DOMAINS`.
+ *
+ * There is no built-in competitor list. Every `.tn` shop is accepted by
+ * `isCompetitorDomain` on its own, so a lookup covers whatever Google returns
+ * from the local market instead of the handful of shops someone remembered to
+ * write down. This is only for the rare shop outside `.tn` that an admin still
+ * wants to price against.
+ */
 export function competitorDomains(): string[] {
   const configured = process.env.COMPETITOR_DOMAINS?.trim()
 
-  if (!configured) return DEFAULT_COMPETITOR_DOMAINS
+  if (!configured) return []
 
   return configured
     .split(',')
@@ -101,24 +96,19 @@ export function competitorDomains(): string[] {
     .filter(Boolean)
 }
 
-/** Only `COMPETITOR_DOMAINS` are accepted, instead of any `.tn` host. */
-export const isStrict = (): boolean => process.env.COMPETITOR_DOMAINS_STRICT === 'true'
-
 /**
  * True for a shop the admin is willing to be compared against.
  *
- * Any `.tn` host counts by default, so the feature works on day one for the
- * Tunisian beauty shops nobody thought to list. Set
- * `COMPETITOR_DOMAINS_STRICT=true` to accept only `COMPETITOR_DOMAINS`.
+ * Any `.tn` host counts, so the feature works on day one for the Tunisian shops
+ * nobody thought to list and nothing has to be kept in sync as shops come and
+ * go. `COMPETITOR_DOMAINS` only adds shops outside `.tn` — it is never required.
  */
 export function isCompetitorDomain(hostname: string): boolean {
   const host = hostname.toLowerCase()
 
-  if (competitorDomains().some((domain) => host === domain || host.endsWith(`.${domain}`))) {
-    return true
-  }
+  if (host.endsWith('.tn')) return true
 
-  return !isStrict() && host.endsWith('.tn')
+  return competitorDomains().some((domain) => host === domain || host.endsWith(`.${domain}`))
 }
 
 /**
@@ -151,7 +141,6 @@ export async function searchCompetitorPrices({
   }
 
   const domains = competitorDomains()
-  const strict = isStrict()
   // The title usually opens with the brand; when it does not, the brand is worth
   // adding, because a shop's listing may name the product differently.
   const searchInput = [productTitle, brand?.trim()].filter(Boolean).join(' ')
@@ -167,9 +156,9 @@ export async function searchCompetitorPrices({
   // has nothing to add, and the `site:` clause is rebuilt here rather than taken
   // from the model, so query and post-filter keep agreeing. See `enhanceQuery.ts`
   // for why the keywords are worth rewriting at all.
-  const plainQuery = buildSearchQuery({ domains, strict, title: searchInput })
+  const plainQuery = buildSearchQuery({ domains, title: searchInput })
   const enhanced = await enhanceSearchQuery({ brand, title: productTitle })
-  const query = enhanced ? buildSearchQuery({ domains, strict, title: enhanced }) : plainQuery
+  const query = enhanced ? buildSearchQuery({ domains, title: enhanced }) : plainQuery
 
   const response = await googleSearch({ apiKey, query })
   const results = response.organic_results ?? []

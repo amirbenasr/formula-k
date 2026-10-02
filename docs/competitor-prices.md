@@ -38,7 +38,7 @@ Key files:
 | `src/lib/competitorPrices/parse.ts` | Price text → dinars, and title → match score. Pure, unit-tested |
 | `src/lib/competitorPrices/query.ts` | Product title → the Google query. Pure, unit-tested |
 | `src/lib/competitorPrices/enhanceQuery.ts` | Product title → better keywords, via the cheap DeepSeek model (optional) |
-| `src/lib/competitorPrices/search.ts` | Domain allow-list, confidence scoring, one offer per shop |
+| `src/lib/competitorPrices/search.ts` | Shop acceptance rules, confidence scoring, one offer per shop |
 | `src/lib/competitorPrices/serpapi.ts` | The only file that knows about the search provider |
 | `src/lib/competitorPrices/errors.ts` | Failures that read as sentences, with an HTTP status |
 | `src/endpoints/competitorPrices/fetch.ts` | HTTP surface + upsert (declared on the collection) |
@@ -60,16 +60,16 @@ Optional:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `COMPETITOR_DOMAINS` | `jumia.com.tn,mytek.tn,tunisianet.com.tn,wiki.tn` | Domains treated as competitors |
-| `COMPETITOR_DOMAINS_STRICT` | `false` | `true` accepts only `COMPETITOR_DOMAINS`, instead of any `.tn` host |
+| `COMPETITOR_DOMAINS` | *unset* | Optional extra shops to accept, outside `.tn` |
 | `COMPETITOR_QUERY_ENHANCE` | `true` | `false` skips the AI keyword rewrite and always searches the plain query |
 
 The keyword rewrite (section 4a) needs `DEEPSEEK_API_KEY`, which the admin AI assistant also
 uses. Without it — or if the model call fails — lookups still run on the plain query.
 
-Any `*.tn` host is accepted by default, which is what makes the feature work on day one for
-the local beauty shops nobody thought to list. Set `COMPETITOR_DOMAINS_STRICT=true` to keep
-comparisons to a known set.
+Any `*.tn` host is accepted, with no competitor list to configure or maintain: whatever
+Google returns from the local market is compared, and shops that open later are covered
+without a code change. `COMPETITOR_DOMAINS` exists only to add a shop *outside* `.tn` that
+should still be accepted.
 
 SerpAPI's free plan is 100 searches a month; one click on **Check prices** is one search.
 Note that Tunisia is poorly covered by Google *Shopping*, which is why this uses the ordinary
@@ -122,11 +122,9 @@ Two rules the builder follows:
 
 - **Never quote the title.** Punctuation (dashes, pipes, brackets, accents) is flattened to
   spaces, so `Sérum Éclat — 30ml` searches as `Serum Eclat 30ml`.
-- **The `site:` clause must mirror `isCompetitorDomain`.** With the default settings any `.tn`
-  host is accepted, so the filter is `site:.tn` — *not* the four domains in
-  `COMPETITOR_DOMAINS`, which would silently exclude every other Tunisian shop the
-  post-filter would have accepted. Only `COMPETITOR_DOMAINS_STRICT=true` narrows the query to
-  the configured list.
+- **The `site:` clause must mirror `isCompetitorDomain`.** Any `.tn` host is accepted, so the
+  filter is `site:.tn` — *not* a hand-written list of competitor domains, which would silently
+  exclude every other Tunisian shop the post-filter would have accepted.
 
 **Every rejection is counted.** The response carries the query, the number of results Google
 returned, a count per filter (`not Tunisian`, `a different product`, `no readable price`) and
@@ -174,7 +172,8 @@ by AI*, so a thin result set can be read against the query that actually produce
 
 Three filters run in order, and a result has to pass all of them:
 
-1. **A Tunisian shop.** The domain must match `COMPETITOR_DOMAINS` or end in `.tn`.
+1. **A Tunisian shop.** The domain must end in `.tn`, or match a shop added through
+   `COMPETITOR_DOMAINS`.
 2. **Our product.** Title similarity (containment, not Jaccard, because competitor titles are
    our title plus noise) must reach 0.25. The score becomes `matchConfidence`:
    `exact` ≥ 0.6, `likely` ≥ 0.4, else `uncertain`.
