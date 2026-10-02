@@ -100,12 +100,16 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                   },
                   filterOptions: ({ data }) => {
                     if (data?.enableVariants && data?.variantTypes?.length) {
-                      const variantTypeIDs = data.variantTypes.map((item: any) => {
-                        if (typeof item === 'object' && item?.id) {
-                          return item.id
+                      // `variantTypes` arrives untyped here (it may be ids or
+                      // populated documents depending on the request), so the
+                      // element is narrowed by hand rather than with `any`.
+                      const variantTypeIDs = data.variantTypes.map((item: unknown) => {
+                        if (typeof item === 'object' && item !== null && 'id' in item) {
+                          return (item as { id: DefaultDocumentIDType }).id
                         }
-                        return item
-                      }) as DefaultDocumentIDType[]
+
+                        return item as DefaultDocumentIDType
+                      })
 
                       if (variantTypeIDs.length === 0)
                         return {
@@ -246,6 +250,22 @@ export const ProductsCollection: CollectionOverride = ({ defaultCollection }) =>
                   },
                 },
               ],
+            },
+          ],
+        },
+        {
+          label: 'Competitor Prices',
+          description:
+            'What other Tunisian shops charge for this product, pulled from Google search.',
+          fields: [
+            {
+              name: 'competitorPrices',
+              type: 'ui',
+              admin: {
+                components: {
+                  Field: '@/components/admin/CompetitorPrices#CompetitorPricesField',
+                },
+              },
             },
           ],
         },
