@@ -35,10 +35,11 @@ Key files:
 | Path | Role |
 | --- | --- |
 | `src/lib/competitorPrices/parse.ts` | Price text → dinars, and title → match score. Pure, unit-tested |
+| `src/lib/competitorPrices/query.ts` | Product title → the Google query. Pure, unit-tested |
 | `src/lib/competitorPrices/search.ts` | Domain allow-list, confidence scoring, one offer per shop |
 | `src/lib/competitorPrices/serpapi.ts` | The only file that knows about the search provider |
 | `src/lib/competitorPrices/errors.ts` | Failures that read as sentences, with an HTTP status |
-| `src/endpoints/competitorPrices/fetch.ts` | HTTP surface + upsert |
+| `src/endpoints/competitorPrices/fetch.ts` | HTTP surface + upsert (declared on the collection) |
 | `src/collections/CompetitorPrices/index.ts` | Storage |
 | `src/components/admin/CompetitorPrices.tsx` | The tab (a `ui` field on products) |
 
@@ -91,7 +92,48 @@ wins; when we do not, the row is stored with `ambiguous` noted.
 
 ---
 
-## 4. Matching, and what is deliberately not stored
+## 4. The query, and why the first one found nothing
+
+The query is built in `query.ts` and looks like what a Tunisian shopper would type:
+
+```
+prix Anua Niacinamide Dark Spot Correcting Serum 30ml site:.tn
+```
+
+The first version quoted the whole title instead:
+
+```
+"Anua – Niacinamide Dark Spot Correcting Serum – 30ml" Anua prix
+```
+
+That found almost nothing, and the failure was invisible: the tab reported "no Tunisian shop
+listed … with a readable price", which reads like a parsing problem. It was a search problem.
+A quoted phrase has to appear **verbatim**, no shop writes a title with those en dashes, and
+Google answered with 8 results that were mostly the brand's own pages. The unquoted `.tn`-
+restricted form returns 20+ local shops.
+
+Two rules the builder follows:
+
+- **Never quote the title.** Punctuation (dashes, pipes, brackets, accents) is flattened to
+  spaces, so `Sérum Éclat — 30ml` searches as `Serum Eclat 30ml`.
+- **The `site:` clause must mirror `isCompetitorDomain`.** With the default settings any `.tn`
+  host is accepted, so the filter is `site:.tn` — *not* the four domains in
+  `COMPETITOR_DOMAINS`, which would silently exclude every other Tunisian shop the
+  post-filter would have accepted. Only `COMPETITOR_DOMAINS_STRICT=true` narrows the query to
+  the configured list.
+
+**Every rejection is counted.** The response carries the query, the number of results Google
+returned, a count per filter (`not Tunisian`, `a different product`, `no readable price`) and
+up to five matching listings whose price could not be read. The tab prints the query with an
+**open in Google** link and lists those unpriced shops as links, so a thin result set can be
+diagnosed — and worked around by hand — instead of guessed at.
+
+If coverage still looks thin, the levers are `num` in `serpapi.ts` (currently 20) and adding
+`filter=0` to disable Google's omitted-similar-results filter.
+
+---
+
+## 5. Matching, and what is deliberately not stored
 
 Three filters run in order, and a result has to pass all of them:
 
@@ -115,7 +157,7 @@ add or correct a row by hand (Content → Competitor Prices).
 
 ---
 
-## 5. Security
+## 6. Security
 
 Custom Payload endpoints are unauthenticated by default, so `/api/competitor-prices/fetch`
 checks for an admin session itself and then runs every database call with
@@ -125,7 +167,7 @@ a signed-in customer, who can otherwise reach `/admin`.
 
 ---
 
-## 6. Not built (yet)
+## 7. Not built (yet)
 
 - Per-variant competitor prices.
 - Scheduled refreshes and price-drop alerts.

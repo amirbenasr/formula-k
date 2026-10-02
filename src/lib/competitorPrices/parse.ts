@@ -199,22 +199,29 @@ export const normalizeTitle = (value: string): string =>
 
 /**
  * Words that appear in almost every listing and therefore say nothing about
- * whether two listings are the same product.
+ * whether two listings are the same product. Volume and weight units are in
+ * here for the same reason: every cosmetics title has one. The number in front
+ * of a unit does distinguish products (30 ml is not 50 ml), which is why
+ * `tokensOf` splits `30ml` into `30` and `ml` and then drops the unit.
  */
 const STOP_WORDS = new Set([
   'and',
   'avec',
+  'cl',
   'de',
   'des',
-  'du',
   'dt',
+  'du',
   'en',
   'et',
   'for',
+  'kg',
   'la',
   'le',
   'les',
+  'ml',
   'of',
+  'oz',
   'pour',
   'price',
   'prix',
@@ -229,6 +236,8 @@ const tokensOf = (value: string): Set<string> =>
   new Set(
     normalizeTitle(value)
       .split(' ')
+      // `30ml` and `30 ml` are the same size written two ways.
+      .flatMap((token) => token.replace(/(\d)([a-z])/g, '$1 $2').split(' '))
       .filter((token) => token.length > 1 && !STOP_WORDS.has(token)),
   )
 

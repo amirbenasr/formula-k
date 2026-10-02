@@ -23,6 +23,8 @@ import './CompetitorPrices.scss'
 
 const baseClass = 'competitor-prices'
 
+type UnpricedListing = { source: string; title: string; url: string }
+
 type FetchResponse = {
   checkedAt?: string
   error?: string
@@ -31,7 +33,13 @@ type FetchResponse = {
   found?: number
   message?: string
   ok?: boolean
+  /** The Google query that was actually sent. */
+  query?: string
   scanned?: number
+  /** Why results were discarded, by filter. */
+  skipped?: { foreignDomain?: number; noPrice?: number; weakMatch?: number }
+  /** Matching shops whose price could not be read from the snippet. */
+  unpriced?: UnpricedListing[]
 }
 
 /**
@@ -73,6 +81,7 @@ export const CompetitorPricesField = () => {
   const [error, setError] = useState<null | string>(null)
   const [message, setMessage] = useState<null | string>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [lastCheck, setLastCheck] = useState<FetchResponse | null>(null)
 
   const isAdmin = Boolean((user as { roles?: string[] } | null)?.roles?.includes('admin'))
   const ourPrice =
@@ -125,6 +134,7 @@ export const CompetitorPricesField = () => {
     setBusy(true)
     setError(null)
     setMessage(null)
+    setLastCheck(null)
 
     try {
       const response = await fetch('/api/competitor-prices/fetch', {
@@ -141,6 +151,7 @@ export const CompetitorPricesField = () => {
         return
       }
 
+      setLastCheck(data)
       setMessage(
         data.message ??
           `Found ${data.found ?? 0} competitor price${data.found === 1 ? '' : 's'} in ${data.scanned ?? 0} search results.`,
@@ -158,6 +169,7 @@ export const CompetitorPricesField = () => {
 
   const visible = (rows ?? []).filter((row) => !row.ignored)
   const hidden = (rows?.length ?? 0) - visible.length
+  const unpriced = lastCheck?.unpriced ?? []
   const cheapest = visible.length > 0 ? Math.min(...visible.map((row) => row.competitorPrice)) : null
   const cheaperThanUs =
     ourPrice !== null && visible.some((row) => row.competitorPrice < ourPrice)
@@ -199,6 +211,32 @@ export const CompetitorPricesField = () => {
       {error && <p className={`${baseClass}__error`}>{error}</p>}
       {message && !error && <p className={`${baseClass}__notice`}>{message}</p>}
       {loadFailed && <p className={`${baseClass}__error`}>Could not load saved prices.</p>}
+
+      {lastCheck?.query && (
+        <div className={`${baseClass}__diagnostics`}>
+          <p className={`${baseClass}__query`}>
+            Searched Google for <code>{lastCheck.query}</code>{' '}
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent(lastCheck.query)}`}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              open in Google
+            </a>
+          </p>
+
+          {unpriced.length > 0 && (
+            <p className={`${baseClass}__unpriced`}>
+              Matched, but stated no price we could read — open and add by hand:{' '}
+              {unpriced.map((listing) => (
+                <a href={listing.url} key={listing.url} rel="noopener noreferrer" target="_blank">
+                  {listing.source}
+                </a>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
 
       {id && rows !== null && (
         <>

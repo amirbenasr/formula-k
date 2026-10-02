@@ -73,7 +73,10 @@ beforeAll(async () => {
   }
 
   config = await imported.default
-})
+  // Loading the whole config pulls in every plugin and adapter, which takes a
+  // few seconds alone and longer on a loaded CI runner. The default 10s hook
+  // timeout made this file fail only when the full suite ran in parallel.
+}, 60_000)
 
 describe('the collision guard itself', () => {
   it('flags the exact bug that shipped', () => {

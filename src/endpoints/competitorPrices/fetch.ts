@@ -167,17 +167,28 @@ export const competitorPricesFetchEndpoint: Endpoint = {
       }
     }
 
+    const reasons = [
+      outcome.skipped.foreignDomain > 0 &&
+        `${outcome.skipped.foreignDomain} not Tunisian`,
+      outcome.skipped.weakMatch > 0 &&
+        `${outcome.skipped.weakMatch} a different product`,
+      outcome.skipped.noPrice > 0 && `${outcome.skipped.noPrice} with no readable price`,
+    ].filter((reason): reason is string => Boolean(reason))
+
     return Response.json({
       checkedAt: now,
       found: outcome.offers.length,
       message:
         outcome.offers.length === 0
-          ? `No Tunisian shop listed "${title}" with a readable price. Google returned ${outcome.scanned} result${outcome.scanned === 1 ? '' : 's'}.`
-          : undefined,
+          ? `Google returned ${outcome.scanned} result${outcome.scanned === 1 ? '' : 's'} for "${outcome.query}" and none could be used${reasons.length > 0 ? ` — ${reasons.join(', ')}` : ''}.`
+          : `Found ${outcome.offers.length} competitor price${outcome.offers.length === 1 ? '' : 's'} in ${outcome.scanned} search results.`,
       ok: true,
       ourPrice: ourPrice ?? null,
+      query: outcome.query,
       rows: saved,
       scanned: outcome.scanned,
+      skipped: outcome.skipped,
+      unpriced: outcome.unpriced,
     })
   },
 }

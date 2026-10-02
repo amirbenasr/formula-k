@@ -57,6 +57,31 @@
     border: 1px solid var(--theme-elevation-150);
   }
 
+  &__diagnostics {
+    color: var(--theme-elevation-600);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) / 4);
+    font-size: 0.85rem;
+    margin: 0;
+
+    p {
+      margin: 0;
+    }
+
+    code {
+      background: var(--theme-elevation-100);
+      border-radius: var(--style-radius-s);
+      color: var(--theme-text);
+      padding: 0 calc(var(--base) / 4);
+      word-break: break-word;
+    }
+  }
+
+  &__unpriced a {
+    margin-right: calc(var(--base) / 2);
+  }
+
   &__table {
     border-collapse: collapse;
     width: 100%;
