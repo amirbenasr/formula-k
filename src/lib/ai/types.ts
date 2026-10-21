@@ -60,6 +60,33 @@ export type ProductOperation = 'archive' | 'create' | 'publish' | 'update'
 /** `op` values that create or edit a product. */
 export type ProductWriteOperation = 'create' | 'update'
 
+/**
+ * How a staged image change treats the existing gallery.
+ *
+ * `set_primary` is separate from `replace` because the primary image is simply
+ * `gallery[0]` on the storefront: promoting an image must not disturb the order
+ * of the rest, and re-sending the whole list to achieve it would risk dropping
+ * a row the model never saw.
+ */
+export type ImageMode = 'append' | 'replace' | 'set_primary'
+
+/**
+ * An image resolved for a product, kept in the staged preview so the approval
+ * panel can show the actual picture rather than "media id 42".
+ */
+export type ResolvedImage = {
+  /** True for an image this proposal adds to the gallery. */
+  added?: boolean
+  alt?: string
+  credit?: string
+  id: number
+  /** `upload` | `web` | `seed`, as stored on the media row. */
+  source?: string
+  /** Origin page for a web-sourced image. */
+  sourceUrl?: string
+  url?: string
+}
+
 /** A single field edit shown as `from → to` in the approval UI. */
 export type FieldDiff = {
   /** Existing value, absent on a create. */

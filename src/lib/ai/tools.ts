@@ -4,9 +4,12 @@ import { z } from 'zod'
 
 import {
   stageBrandWrite,
+  stageProductImages,
   stageProductStatus,
   stageProductWrite,
 } from './catalogue'
+import { searchWebImages } from './image-search'
+import { searchMedia } from './media-lookup'
 import { inventoryRows, resolveTargets } from './resolve'
 import type { AiToolContext, LooseDoc, PlannedChange, StagedWrite } from './types'
 import { money } from './types'
@@ -166,6 +169,52 @@ const stageBrandWriteSchema = z.object({
 })
 type StageBrandWriteInput = z.infer<typeof stageBrandWriteSchema>
 
+const findMediaSchema = z.object({
+  limit: z.number().int().min(1).max(20).optional().describe('Max matches to return (default 8)'),
+  query: z
+    .string()
+    .describe('Product or brand name to match against the alt text and filenames of uploaded images'),
+})
+type FindMediaInput = z.infer<typeof findMediaSchema>
+
+const searchWebImagesSchema = z.object({
+  limit: z.number().int().min(1).max(8).optional().describe('Max candidates to return (default 6)'),
+  query: z
+    .string()
+    .describe('What the photo should show, in plain words — e.g. "Anua Heartleaf 77 toner bottle"'),
+})
+type SearchWebImagesInput = z.infer<typeof searchWebImagesSchema>
+
+const stageProductImagesSchema = z.object({
+  id: z.string().describe('Product id, slug or title'),
+  mediaIds: z
+    .array(z.number().int().positive())
+    .optional()
+    .describe(
+      'Media ids already in the library — either returned by find_media, or the id of an image the admin just uploaded in the chat.',
+    ),
+  mode: z
+    .enum(['append', 'replace', 'set_primary'])
+    .optional()
+    .describe(
+      'set_primary (default) puts the new image first and keeps the others; append adds to the end; replace discards the existing gallery.',
+    ),
+  note: z.string().optional(),
+  webUrls: z
+    .array(
+      z.object({
+        credit: z.string().optional().describe('Author · licence, from the search result'),
+        pageUrl: z.string().optional().describe('The result page the image was found on'),
+        title: z.string().optional().describe('Short description, used as alt text'),
+        url: z.string().describe('Direct image URL, exactly as returned by search_web_images'),
+      }),
+    )
+    .max(3)
+    .optional()
+    .describe('Remote images to download into the library and attach. Use only URLs from search_web_images.'),
+})
+type StageProductImagesToolInput = z.infer<typeof stageProductImagesSchema>
+
 export function buildTools({ conversationId, payload, user }: AiToolContext): ToolSet {
   const context: AiToolContext = { conversationId, payload, user }
 
@@ -262,6 +311,50 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
             title: brand.title,
           })),
           count: docs.length,
+        }
+      },
+    }),
+
+    find_media: tool({
+      description:
+        'Search the images the store already owns, by product or brand name. Scores are 0–1; 0.6 and above is usually the same product. ALWAYS call this before search_web_images: reusing a library image is free, instant, already licensed, and is normally the brand\'s own packshot.',
+      inputSchema: findMediaSchema,
+      execute: async ({ limit = 8, query }: FindMediaInput) => {
+        const { matches, scanned, strongMatch } = await searchMedia(payload, user, query, limit)
+
+        return {
+          best: matches[0] ?? null,
+          hint: strongMatch
+            ? `A strong match exists (media id ${matches[0].id}). Attach it with stage_product_images using mediaIds, instead of searching the web.`
+            : 'Nothing in the library matches well. If the admin attached an image in this turn, use its id; otherwise call search_web_images.',
+          matches,
+          scanned,
+          strongMatch,
+        }
+      },
+    }),
+
+    search_web_images: tool({
+      description:
+        'Find candidate photos on the web. Only call this when find_media found no plausible match AND the admin did not supply an image. These are openly licensed stock or encyclopaedic photos — NOT the brand\'s official packshots — so the admin must confirm the choice. Returns direct image URLs to pass to stage_product_images.',
+      inputSchema: searchWebImagesSchema,
+      execute: async ({ limit = 6, query }: SearchWebImagesInput) => {
+        const { candidates, note, provider, relaxed, usedQuery } = await searchWebImages(query, limit)
+
+        return {
+          candidates,
+          hint:
+            candidates.length === 0
+              ? 'No web candidates. Ask the admin to upload an image instead of guessing a URL.'
+              : relaxed
+                ? `Nothing matched "${query}", so these match "${usedQuery}" instead. They are topically related, not pictures of this product — show them to the admin and let them choose, and say plainly that it is a generic photo.`
+                : 'Pick the closest candidate and stage it with stage_product_images (webUrls). Tell the admin it is a web image and name the licence — never claim it is the official product photo.',
+          note,
+          provider,
+          relaxed: relaxed ?? false,
+          usedQuery,
+          warning:
+            'Web images are Creative Commons licensed, not official brand assets. The admin is responsible for confirming the store may use it.',
         }
       },
     }),
@@ -467,6 +560,14 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
       inputSchema: stageProductPublishSchema,
       execute: async ({ id, publish }: StageProductPublishInput) =>
         stageProductStatus(context, { id, publish }),
+    }),
+
+    stage_product_images: tool({
+      description:
+        'Propose a product image change: set the primary (storefront) image, add images, or replace the whole gallery. Does not write anything by itself — the admin approves it. Supply `mediaIds` for an image already in the library (or one the admin just uploaded), and/or `webUrls` for remote images, which are downloaded into the library when the proposal is staged. Never invent a URL: only use ones returned by search_web_images.',
+      inputSchema: stageProductImagesSchema,
+      execute: async ({ id, mediaIds, mode, webUrls }: StageProductImagesToolInput) =>
+        stageProductImages(context, { id, mediaIds, mode, webUrls }),
     }),
 
     stage_brand_create: tool({

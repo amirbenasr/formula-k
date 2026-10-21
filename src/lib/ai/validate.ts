@@ -159,7 +159,85 @@ type FieldRule = {
   /** Collection key written on apply. */
   key: string
   label: string
+  /**
+   * Renders the stored value for the approval table. Without it the admin sees
+   * raw collection shapes (`[{"image":11}]`) instead of something readable.
+   */
+  formatDiff?: (value: unknown) => unknown
   validate: (value: unknown) => Validation
+}
+
+/**
+ * One row of `products.gallery`.
+ *
+ * The field is an `array` of `{ image, variantOption }` objects — *not* a plain
+ * upload list. Writing bare ids here is silently wrong: Postgres stores nothing
+ * and the storefront keeps showing the old image, which is far worse than an
+ * error because the admin believes the change landed.
+ */
+export type GalleryRow = { image: number; variantOption?: number | null }
+
+/** Reads a media id from a raw id, a numeric string, or a populated media doc. */
+const mediaId = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value
+
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const parsed = Number(value)
+    return parsed > 0 ? parsed : null
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const id = (value as { id?: unknown }).id
+    if (typeof id === 'number' && Number.isInteger(id) && id > 0) return id
+  }
+
+  return null
+}
+
+/** Normalises whatever Payload returned for `gallery` into plain rows. */
+export function readGalleryRows(gallery: unknown): GalleryRow[] {
+  if (!Array.isArray(gallery)) return []
+
+  const rows: GalleryRow[] = []
+
+  for (const item of gallery) {
+    // A bare id is not a shape the database returns, but accepting it keeps the
+    // helper total if the field is ever changed to a `hasMany` upload.
+    const bare = mediaId(item)
+
+    if (bare !== null && typeof item !== 'object') {
+      rows.push({ image: bare })
+      continue
+    }
+
+    if (!item || typeof item !== 'object') continue
+
+    const image = mediaId((item as LooseDoc).image)
+    if (image === null) continue
+
+    const variantOption = mediaId((item as LooseDoc).variantOption)
+
+    rows.push(variantOption === null ? { image } : { image, variantOption })
+  }
+
+  return rows
+}
+
+/**
+ * Rebuilds gallery rows for `ids`, carrying over each image's `variantOption`.
+ *
+ * Reordering or appending an image must not quietly unbind the others from their
+ * variants: a variant product whose rows lose `variantOption` stops showing
+ * per-variant pictures on the storefront, and nothing reports it.
+ */
+export function toGalleryRows(ids: number[], current: GalleryRow[] = []): GalleryRow[] {
+  const existing = new Map(current.map((row) => [row.image, row]))
+
+  return ids.map((image) => {
+    const row = existing.get(image)
+
+    return row?.variantOption ? { image, variantOption: row.variantOption } : { image }
+  })
 }
 
 const asText = (value: unknown): Validation => {
@@ -233,6 +311,34 @@ const asId = (value: unknown): Validation => {
   return ok(id)
 }
 
+/**
+ * Ordered media ids for a product gallery.
+ *
+ * Rejects an empty list rather than writing it: `gallery` has `minRows: 1`, so an
+ * empty write would fail inside Payload *after* the admin clicked Apply. Catching
+ * it here turns a 500 into a sentence the model can act on.
+ */
+const asGallery = (value: unknown): Validation => {
+  if (!Array.isArray(value)) return fail('must be an array of media ids')
+
+  if (value.length === 0) {
+    return fail('must keep at least one image — a product without a picture is rejected by the collection')
+  }
+
+  const ids: number[] = []
+
+  for (const entry of value) {
+    const id = mediaId(entry)
+
+    if (id === null) return fail('must contain positive numeric media ids only')
+
+    // Duplicates would render the same photo twice in the product carousel.
+    if (!ids.includes(id)) ids.push(id)
+  }
+
+  return ok(ids)
+}
+
 const asDescription = (value: unknown): Validation => {
   if (typeof value !== 'string') return fail('must be plain text')
 
@@ -265,7 +371,15 @@ export const PRODUCT_RULES: Record<keyof ProductFieldInput, FieldRule> = {
     label: 'Video showcase',
     validate: asBoolean,
   },
-  gallery: { key: 'gallery', label: 'Gallery', validate: asIdList },
+  gallery: {
+    key: 'gallery',
+    formatDiff: (value) => {
+      const count = Array.isArray(value) ? value.length : 0
+      return count === 1 ? '1 image' : `${count} images`
+    },
+    label: 'Gallery',
+    validate: asGallery,
+  },
   inventory: { key: 'inventory', label: 'Stock', validate: asStock },
   price: { key: 'priceInUSD', label: 'Price (TND)', validate: asMoney },
   slug: { key: 'slug', label: 'Slug', validate: asSlug },
@@ -280,6 +394,16 @@ export type NormalizedFields = {
   fields: LooseDoc
 }
 
+export type ProductNormalizeOptions = {
+  /**
+   * The product's current gallery, when editing. Supplying it lets a rewritten
+   * gallery keep each image's `variantOption` binding, and lets the approval
+   * diff show what the gallery currently holds.
+   */
+  currentGallery?: GalleryRow[]
+  require?: Array<keyof ProductFieldInput>
+}
+
 /**
  * Validates the fields the model supplied and returns the write payload.
  *
@@ -288,7 +412,7 @@ export type NormalizedFields = {
  */
 export function normalizeProductFields(
   input: ProductFieldInput,
-  { require = [] as Array<keyof ProductFieldInput> } = {},
+  { currentGallery, require = [] as Array<keyof ProductFieldInput> }: ProductNormalizeOptions = {},
 ): { errors: string[]; ok: false } | { ok: true; result: NormalizedFields } {
   const errors: string[] = []
   const fields: LooseDoc = {}
@@ -317,13 +441,26 @@ export function normalizeProductFields(
       continue
     }
 
-    fields[rule.key] = validated.value
+    // The model deals in ordered media ids; the collection stores rows. The
+    // translation happens here, once, so the model never has to emit an array of
+    // objects and cannot get the shape wrong.
+    const value =
+      name === 'gallery' && Array.isArray(validated.value)
+        ? toGalleryRows(validated.value as number[], currentGallery)
+        : validated.value
+
+    fields[rule.key] = value
+
+    const currentCount = currentGallery?.length ?? 0
 
     diffs.push({
+      ...(name === 'gallery' && currentCount > 0
+        ? { from: currentCount === 1 ? '1 image' : `${currentCount} images` }
+        : {}),
       label: rule.label,
       // `price` and `status` are stored under different keys than the tool uses,
       // so the label is what the admin reads — the raw value is enough here.
-      to: validated.value,
+      to: rule.formatDiff ? rule.formatDiff(value) : value,
     })
   }
 
@@ -358,7 +495,14 @@ const BRAND_RULES: Record<keyof BrandFieldInput, FieldRule> = {
     label: 'Description',
     validate: (value) => (typeof value === 'string' ? ok(value.trim()) : fail('must be a string')),
   },
-  logo: { key: 'logo', label: 'Logo', validate: asIdList },
+  // `logo` is a single upload relation, not a `hasMany` list — an array here
+  // would be rejected by the collection's own validation.
+  logo: {
+    key: 'logo',
+    formatDiff: (value) => (typeof value === 'number' ? `Media #${value}` : value),
+    label: 'Logo',
+    validate: asId,
+  },
   slug: { key: 'slug', label: 'Slug', validate: asSlug },
   title: { key: 'title', label: 'Title', validate: asText },
 }
@@ -395,7 +539,10 @@ export function normalizeBrandFields(
     }
 
     fields[rule.key] = validated.value
-    diffs.push({ label: rule.label, to: validated.value })
+    diffs.push({
+      label: rule.label,
+      to: rule.formatDiff ? rule.formatDiff(validated.value) : validated.value,
+    })
   }
 
   if (errors.length === 0 && Object.keys(fields).length === 0) {

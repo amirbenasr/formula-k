@@ -170,9 +170,123 @@
   }
 
   &__form {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) / 2);
+  }
+
+  &__row {
     align-items: flex-start;
     display: flex;
     gap: calc(var(--base) / 2);
+  }
+
+  &__tools {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--base) / 2);
+  }
+
+  &__attach {
+    background: var(--theme-elevation-0);
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: var(--border-radius-m);
+    color: var(--theme-text);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: calc(var(--base) / 3) calc(var(--base) / 2);
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--theme-elevation-400);
+    }
+  }
+
+  &__attachment {
+    align-items: center;
+    background: var(--theme-elevation-100);
+    border-radius: var(--border-radius-m);
+    display: flex;
+    font-size: 0.8rem;
+    gap: calc(var(--base) / 3);
+    padding: 2px calc(var(--base) / 3) 2px 2px;
+
+    img {
+      border-radius: 3px;
+      height: 28px;
+      object-fit: cover;
+      width: 28px;
+    }
+  }
+
+  &__attachment-name {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__attachment-remove {
+    background: none;
+    border: none;
+    color: var(--theme-elevation-600);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 4px;
+  }
+
+  /*
+   * The proposal's images. These are the point of the review step: a media id
+   * tells the admin nothing, a picture tells them whether it is the right
+   * product.
+   */
+  &__images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--base) / 2);
+  }
+
+  &__image {
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: var(--border-radius-m);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.7rem;
+    margin: 0;
+    overflow: hidden;
+    width: 120px;
+
+    img {
+      aspect-ratio: 1;
+      display: block;
+      object-fit: cover;
+      width: 100%;
+    }
+
+    figcaption {
+      color: var(--theme-elevation-600);
+      padding: 4px 6px;
+    }
+
+    &--primary {
+      border-color: var(--theme-success-500, #2e7d32);
+      border-width: 2px;
+    }
+  }
+
+  &__image-missing {
+    align-items: center;
+    aspect-ratio: 1;
+    background: var(--theme-elevation-100);
+    color: var(--theme-elevation-500);
+    display: flex;
+    justify-content: center;
   }
 
   &__input {
