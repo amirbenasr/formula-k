@@ -1,197 +1,182 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  buildQueryVariants,
-  parseCommonsResponse,
-  parseOpenverseResults,
-  rankImageCandidates,
-  type WebImageCandidate,
-} from '../image-search'
+import { MIN_IMAGE_DIMENSION, parseSerpApiImages, searchWebImages } from '../image-search'
 
-describe('parseOpenverseResults', () => {
-  it('maps a result to a candidate with credit and licence', () => {
-    const [candidate] = parseOpenverseResults({
-      results: [
-        {
-          creator: 'Jane Doe',
-          foreign_landing_url: 'https://www.flickr.com/photos/jane/123',
-          height: 1200,
-          license: 'by',
-          license_version: '4.0',
-          title: 'Anua Heartleaf Toner',
-          url: 'https://live.staticflickr.com/1/2/3.jpg',
-          width: 1200,
-        },
-      ],
-    })
+/**
+ * A note on why this suite is shaped around SerpAPI's payload rather than a
+ * provider-agnostic one: the previous version of this feature used Openverse and
+ * Wikimedia Commons and was removed, because those corpora do not contain branded
+ * beauty products. The mapping below is the whole contract with the provider, so
+ * the traps in it — a result with no `original`, an `original` that is really a
+ * thumbnail, HTML entities in titles — are what these tests pin down.
+ */
+describe('parseSerpApiImages', () => {
+  const result = (overrides: Record<string, unknown> = {}) => ({
+    is_product: true,
+    link: 'https://www.anua.com/products/heartleaf-toner',
+    original: 'https://anua.com/cdn/shop/files/heartleaf-77.jpg',
+    original_height: 1200,
+    original_width: 1200,
+    source: 'Anua',
+    thumbnail: 'https://serpapi.com/searches/abc/images/e60ab271.jpeg',
+    title: 'Anua Heartleaf 77% Soothing Toner',
+    ...overrides,
+  })
+
+  it('maps a result to a candidate with everything the download needs', () => {
+    const [candidate] = parseSerpApiImages({ images_results: [result()] })
 
     expect(candidate).toEqual({
-      credit: 'Jane Doe · by 4.0',
+      credit: 'Anua',
+      fallbackUrl: 'https://serpapi.com/searches/abc/images/e60ab271.jpeg',
       height: 1200,
-      license: 'by 4.0',
-      provider: 'openverse',
-      sourceUrl: 'https://www.flickr.com/photos/jane/123',
-      title: 'Anua Heartleaf Toner',
-      url: 'https://live.staticflickr.com/1/2/3.jpg',
+      isProduct: true,
+      pageUrl: 'https://www.anua.com/products/heartleaf-toner',
+      provider: 'serpapi',
+      title: 'Anua Heartleaf 77% Soothing Toner',
+      url: 'https://anua.com/cdn/shop/files/heartleaf-77.jpg',
       width: 1200,
     })
   })
 
-  it('drops results without a usable image URL', () => {
-    const candidates = parseOpenverseResults({
-      results: [
-        { title: 'no url' },
-        { title: 'javascript', url: 'javascript:alert(1)' },
-        { title: 'relative', url: '/media/x.jpg' },
+  it('drops results with no original image — a thumbnail cannot become a product photo', () => {
+    expect(
+      parseSerpApiImages({ images_results: [{ thumbnail: 'https://x.test/t.jpg' }] }),
+    ).toEqual([])
+  })
+
+  it('drops an "original" that is only thumbnail sized', () => {
+    const candidates = parseSerpApiImages({
+      images_results: [result({ original_height: 90, original_width: 120 })],
+    })
+
+    expect(candidates).toEqual([])
+  })
+
+  it('keeps results whose dimensions are missing, and still tries the download', () => {
+    const [candidate] = parseSerpApiImages({
+      images_results: [result({ original_height: undefined, original_width: undefined })],
+    })
+
+    expect(candidate.url).toBe('https://anua.com/cdn/shop/files/heartleaf-77.jpg')
+    expect(candidate.width).toBeUndefined()
+    expect(candidate.height).toBeUndefined()
+  })
+
+  it('treats the dimension floor as inclusive', () => {
+    const candidates = parseSerpApiImages({
+      images_results: [
+        result({ original_height: MIN_IMAGE_DIMENSION, original_width: MIN_IMAGE_DIMENSION }),
+      ],
+    })
+
+    expect(candidates).toHaveLength(1)
+  })
+
+  it('falls back to the hostname when the result has no source label', () => {
+    const [candidate] = parseSerpApiImages({
+      images_results: [result({ source: undefined })],
+    })
+
+    expect(candidate.credit).toBe('anua.com')
+  })
+
+  it('strips HTML and decodes entities in titles and sources', () => {
+    const [candidate] = parseSerpApiImages({
+      images_results: [result({ source: 'YesStyle &amp; Co', title: '<b>Toner</b> &amp; Cream' })],
+    })
+
+    expect(candidate.title).toBe('Toner & Cream')
+    expect(candidate.credit).toBe('YesStyle & Co')
+  })
+
+  it('rejects non-http image URLs', () => {
+    const candidates = parseSerpApiImages({
+      images_results: [
+        result({ original: 'data:image/png;base64,AAAA' }),
+        result({ original: '/relative/path.jpg' }),
       ],
     })
 
     expect(candidates).toEqual([])
   })
 
-  it('decodes HTML entities in titles', () => {
-    const [candidate] = parseOpenverseResults({
-      results: [{ title: 'Toner &amp; Cream', url: 'https://x.test/a.jpg' }],
-    })
-
-    expect(candidate.title).toBe('Toner & Cream')
-  })
-
   it('tolerates a malformed payload', () => {
-    expect(parseOpenverseResults(null)).toEqual([])
-    expect(parseOpenverseResults({})).toEqual([])
-    expect(parseOpenverseResults({ results: 'nope' })).toEqual([])
+    expect(parseSerpApiImages(null)).toEqual([])
+    expect(parseSerpApiImages({})).toEqual([])
+    expect(parseSerpApiImages({ images_results: 'nope' })).toEqual([])
+    expect(parseSerpApiImages({ images_results: [null, 42, {}] })).toEqual([])
   })
 })
 
-describe('parseCommonsResponse', () => {
-  const payload = {
-    query: {
-      pages: {
-        '42': {
-          imageinfo: [
-            {
-              descriptionurl: 'https://commons.wikimedia.org/wiki/File:Anua_toner.jpg',
-              extmetadata: {
-                Artist: { value: '<a href="#">Bob Smith</a>' },
-                LicenseShortName: { value: 'CC BY-SA 4.0' },
-              },
-              thumbheight: 900,
-              thumburl: 'https://upload.wikimedia.org/thumb/anua.jpg',
-              thumbwidth: 1200,
-            },
-          ],
-          title: 'File:Anua toner.jpg',
-        },
-      },
-    },
-  }
-
-  it('prefers the scaled thumbnail and strips HTML from the credit', () => {
-    const [candidate] = parseCommonsResponse(payload)
-
-    expect(candidate).toEqual({
-      credit: 'Bob Smith · CC BY-SA 4.0',
-      height: 900,
-      license: 'CC BY-SA 4.0',
-      provider: 'commons',
-      sourceUrl: 'https://commons.wikimedia.org/wiki/File:Anua_toner.jpg',
-      title: 'Anua toner.jpg',
-      url: 'https://upload.wikimedia.org/thumb/anua.jpg',
-      width: 1200,
-    })
+describe('searchWebImages', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
   })
 
-  it('falls back to the original file when there is no thumbnail', () => {
-    const [candidate] = parseCommonsResponse({
-      query: {
-        pages: {
-          '1': {
-            imageinfo: [{ url: 'https://upload.wikimedia.org/full/anua.jpg' }],
-            title: 'File:Anua.jpg',
-          },
-        },
-      },
-    })
+  it('reports a disabled provider without touching the network', async () => {
+    vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'none')
 
-    expect(candidate.url).toBe('https://upload.wikimedia.org/full/anua.jpg')
-    expect(candidate.credit).toBeUndefined()
+    const result = await searchWebImages('anua toner')
+
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/disabled/i)
   })
 
-  it('tolerates a malformed payload', () => {
-    expect(parseCommonsResponse(null)).toEqual([])
-    expect(parseCommonsResponse({ query: {} })).toEqual([])
-    expect(parseCommonsResponse({ query: { pages: { '1': {} } } })).toEqual([])
-  })
-})
+  it('rejects an unknown provider by name', async () => {
+    vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'openverse')
 
-describe('buildQueryVariants', () => {
-  /**
-   * Both providers are AND-matched, so "anua heartleaf toner bottle" returns
-   * nothing at all. Relaxing is what makes the search usable — but it must stop
-   * at two words, because a one-word query returns printer toner for "toner".
-   */
-  it('keeps the precise query first', () => {
-    expect(buildQueryVariants('Anua Heartleaf Toner')[0]).toBe('Anua Heartleaf Toner')
+    const result = await searchWebImages('anua toner')
+
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/Unsupported IMAGE_SEARCH_PROVIDER "openverse"/)
   })
 
-  it('drops packaging filler and relaxes to the product words', () => {
-    const variants = buildQueryVariants('anua heartleaf toner bottle')
+  it('explains a missing API key instead of throwing', async () => {
+    vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'serpapi')
+    vi.stubEnv('SERPAPI_API_KEY', '')
 
-    expect(variants).toContain('heartleaf toner')
-    expect(variants).not.toContain('bottle')
+    const result = await searchWebImages('anua toner')
+
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/SERPAPI_API_KEY is not set/)
   })
 
-  it('never relaxes to a single word', () => {
-    for (const variant of buildQueryVariants('laneige lip sleeping mask')) {
-      expect(variant.trim().split(/\s+/).length).toBeGreaterThanOrEqual(2)
-    }
+  it('rejects an empty query', async () => {
+    const result = await searchWebImages('   ')
+
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/Empty search query/)
   })
 
-  it('returns just the query when there is nothing to relax', () => {
-    expect(buildQueryVariants('toner')).toEqual(['toner'])
+  it('never throws when the provider answers with an error field', async () => {
+    vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'serpapi')
+    vi.stubEnv('SERPAPI_API_KEY', 'test-key')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'Invalid API key' }), { status: 200 })),
+    )
+
+    const result = await searchWebImages('anua toner')
+
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/Invalid API key/)
   })
 
-  it('does not repeat variants', () => {
-    const variants = buildQueryVariants('anua toner')
+  it('never throws when the provider is unreachable', async () => {
+    vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'serpapi')
+    vi.stubEnv('SERPAPI_API_KEY', 'test-key')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('getaddrinfo ENOTFOUND')
+      }),
+    )
 
-    expect(new Set(variants).size).toBe(variants.length)
-  })
-})
+    const result = await searchWebImages('anua toner')
 
-describe('rankImageCandidates', () => {
-  const candidate = (overrides: Partial<WebImageCandidate>): WebImageCandidate => ({
-    provider: 'openverse',
-    title: 'Untitled',
-    url: 'https://example.test/a.jpg',
-    ...overrides,
-  })
-
-  it('prefers the candidate whose title covers the query', () => {
-    const printer = candidate({ title: 'Four Samsung laser toner cartridges' })
-    const skincare = candidate({ title: 'Anua Heartleaf toner bottle' })
-
-    expect(rankImageCandidates([printer, skincare], 'anua toner')).toEqual([skincare, printer])
-  })
-
-  it('uses tags as well as the title', () => {
-    const untitled = candidate({ tags: ['anua', 'toner'], title: 'IMG_0001' })
-    const other = candidate({ title: 'Sunscreen in the desert' })
-
-    expect(rankImageCandidates([other, untitled], 'anua toner')[0]).toBe(untitled)
-  })
-
-  it('leaves the order untouched when nothing matches', () => {
-    const first = candidate({ title: 'Printer toner' })
-    const second = candidate({ title: 'Desert' })
-
-    expect(rankImageCandidates([first, second], 'anua heartleaf')).toEqual([first, second])
-  })
-
-  it('is stable for equally relevant candidates', () => {
-    const first = candidate({ title: 'toner one' })
-    const second = candidate({ title: 'toner two' })
-
-    expect(rankImageCandidates([first, second], 'toner')).toEqual([first, second])
+    expect(result.candidates).toEqual([])
+    expect(result.note).toMatch(/Could not reach the image search provider/)
   })
 })
