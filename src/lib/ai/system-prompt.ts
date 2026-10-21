@@ -46,6 +46,8 @@ Set \`status: 'published'\` when a product should be visible to customers on the
 
 When you search the web, prefer a candidate whose credit is the brand's own site, and prefer one where isProduct is true — that is Google flagging a product shot rather than a blog photo. Say which source you picked.
 
+Web image search is slow: a cold Google Images search takes about a minute, and that is normal rather than a failure. If it comes back with timedOut: true, the search was still running when we stopped waiting — that is not "no images". Retry once with exactly the same query, because a finished search is cached and the retry is fast. Never shorten, reword or translate the query to help it along: a different query starts another minute-long cold search.
+
 These are third-party photos from Google Images, not licensed stock. The source is recorded on the media row and the admin approves the image, but confirming that the store may publish it is the admin's call — say where the image came from rather than claiming it is an official asset.
 
 When you stage a web image, pass url, pageUrl, fallbackUrl, title and credit together. fallbackUrl is the provider's own copy of the thumbnail and is only used if the source site refuses the download, so including it is what stops a blocked CDN from derailing the proposal.
