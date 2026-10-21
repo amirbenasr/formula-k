@@ -2,11 +2,11 @@ import { checkRole } from '@/access/utilities'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import { Gutter } from '@payloadcms/ui'
 import type { AdminViewServerProps } from 'payload'
-import React from 'react'
 
 import type { User } from '@/payload-types'
 
-import { Chat } from './Chat'
+import { AssistantPanel } from './AssistantPanel'
+import { displayFirstName } from './utils'
 import './index.scss'
 
 /**
@@ -24,7 +24,8 @@ export function AIAssistantView({
   user,
 }: AdminViewServerProps) {
   const { req } = initPageResult
-  const isAdmin = Boolean(req.user && checkRole(['admin'], req.user as User))
+  const viewer = req.user as null | User
+  const isAdmin = Boolean(viewer && checkRole(['admin'], viewer))
 
   return (
     <DefaultTemplate
@@ -40,11 +41,15 @@ export function AIAssistantView({
     >
       <Gutter>
         {isAdmin ? (
-          <Chat />
+          <AssistantPanel userName={displayFirstName(viewer?.name, viewer?.email)} />
         ) : (
           <div className="ai-assistant__denied">
-            <h1>Not authorised</h1>
-            <p>The AI assistant is restricted to administrators.</p>
+            <h1>Assistant is admin-only</h1>
+            <p>
+              The AI assistant can read the store and prepare catalogue changes, so it is restricted
+              to administrators. Ask the store owner to add the <strong>admin</strong> role to your
+              account.
+            </p>
           </div>
         )}
       </Gutter>

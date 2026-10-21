@@ -1,7 +1,7 @@
-import { checkRole } from '@/access/utilities'
 import { applyAction } from '@/lib/ai/apply'
-import type { User } from '@/payload-types'
 import { APIError, type Endpoint } from 'payload'
+
+import { requireAssistantAdmin } from './guard'
 
 /**
  * Applies a staged action. Called only from the chat UI when a human clicks
@@ -12,11 +12,7 @@ export const adminAiApplyEndpoint: Endpoint = {
   path: '/admin-ai/apply',
   method: 'post',
   handler: async (req) => {
-    const { user } = req
-
-    if (!user || !checkRole(['admin'], user as User)) {
-      throw new APIError('Unauthorized — the AI assistant is restricted to admins.', 401)
-    }
+    const user = requireAssistantAdmin(req)
 
     let body: { actionId?: number | string } = {}
 
@@ -33,7 +29,7 @@ export const adminAiApplyEndpoint: Endpoint = {
     const result = await applyAction({
       actionId: body.actionId,
       payload: req.payload,
-      user: user as User,
+      user,
     })
 
     return Response.json(result)

@@ -83,6 +83,7 @@ export interface Config {
     'reward-transactions': RewardTransaction;
     'rewards-catalog': RewardsCatalog;
     'ai-action-logs': AiActionLog;
+    'ai-conversations': AiConversation;
     'competitor-prices': CompetitorPrice;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -122,6 +123,7 @@ export interface Config {
     'reward-transactions': RewardTransactionsSelect<false> | RewardTransactionsSelect<true>;
     'rewards-catalog': RewardsCatalogSelect<false> | RewardsCatalogSelect<true>;
     'ai-action-logs': AiActionLogsSelect<false> | AiActionLogsSelect<true>;
+    'ai-conversations': AiConversationsSelect<false> | AiConversationsSelect<true>;
     'competitor-prices': CompetitorPricesSelect<false> | CompetitorPricesSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1336,6 +1338,44 @@ export interface AiActionLog {
   createdAt: string;
 }
 /**
+ * Chat history for the admin AI assistant. Each row is one conversation; the transcript is in `messages`.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-conversations".
+ */
+export interface AiConversation {
+  id: number;
+  /**
+   * Client-generated conversation id. Stable across reloads.
+   */
+  key: string;
+  /**
+   * Derived from the first message; can be renamed from the chat sidebar.
+   */
+  title: string;
+  owner: number | User;
+  /**
+   * Last thing said, shown in the conversation list.
+   */
+  preview?: string | null;
+  messageCount?: number | null;
+  lastMessageAt?: string | null;
+  /**
+   * AI SDK UIMessage[] transcript. Written by /api/admin-ai/chat; editing it by hand will not update the chat.
+   */
+  messages?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Prices competitors charge for the same product. Filled in from Google search on the product edit view, or by hand.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1475,6 +1515,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'ai-action-logs';
         value: number | AiActionLog;
+      } | null)
+    | ({
+        relationTo: 'ai-conversations';
+        value: number | AiConversation;
       } | null)
     | ({
         relationTo: 'competitor-prices';
@@ -1901,6 +1945,21 @@ export interface AiActionLogsSelect<T extends boolean = true> {
   result?: T;
   error?: T;
   appliedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-conversations_select".
+ */
+export interface AiConversationsSelect<T extends boolean = true> {
+  key?: T;
+  title?: T;
+  owner?: T;
+  preview?: T;
+  messageCount?: T;
+  lastMessageAt?: T;
+  messages?: T;
   updatedAt?: T;
   createdAt?: T;
 }

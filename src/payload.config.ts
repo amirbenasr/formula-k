@@ -15,6 +15,7 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { AiActionLog } from '@/collections/AiActionLog'
+import { AiConversations } from '@/collections/AiConversations'
 import { Brands } from '@/collections/Brands'
 import { Categories } from '@/collections/Categories'
 import { CompetitorPrices } from '@/collections/CompetitorPrices'
@@ -24,6 +25,12 @@ import { Users } from '@/collections/Users'
 import { RewardTiers, RewardTransactions, RewardsCatalog } from '@/collections/Rewards'
 import { adminAiApplyEndpoint } from '@/endpoints/adminAi/apply'
 import { adminAiChatEndpoint } from '@/endpoints/adminAi/chat'
+import {
+  adminAiConversationDeleteEndpoint,
+  adminAiConversationEndpoint,
+  adminAiConversationsListEndpoint,
+  adminAiConversationUpdateEndpoint,
+} from '@/endpoints/adminAi/conversations'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
@@ -47,7 +54,7 @@ export default buildConfig({
     components: {
       afterNavLinks: ['@/components/AIAssistant/NavLink#AIAssistantNavLink'],
       beforeLogin: ['@/components/BeforeLogin#BeforeLogin'],
-      beforeDashboard: ['@/components/BeforeDashboard#BeforeDashboard'],
+      beforeDashboard: ['@/components/AIAssistant/DashboardGreeting#DashboardGreeting'],
       graphics: {
         Logo: '@/components/Logo/Logo#Logo',
         Icon: '@/components/Logo/Logo#Icon',
@@ -79,6 +86,7 @@ export default buildConfig({
     RewardTransactions,
     RewardsCatalog,
     AiActionLog,
+    AiConversations,
     CompetitorPrices,
   ],
   db: postgresAdapter({
@@ -144,7 +152,7 @@ export default buildConfig({
     skipVerify: !smtp.configured,
     transportOptions: smtp.transportOptions,
   }),
-  // The admin AI assistant. Both routes enforce admin auth in their handlers,
+  // The admin AI assistant. Every route enforces admin auth in its handler,
   // because Payload custom endpoints are unauthenticated by default.
   //
   // NOTE: competitor price lookups are deliberately NOT here. Their first path
@@ -152,7 +160,14 @@ export default buildConfig({
   // resolves the segment as a slug before consulting root endpoints — so a root
   // endpoint under a collection slug never matches. It is declared on the
   // collection instead. See src/endpoints/competitorPrices/fetch.ts.
-  endpoints: [adminAiChatEndpoint, adminAiApplyEndpoint],
+  endpoints: [
+    adminAiChatEndpoint,
+    adminAiApplyEndpoint,
+    adminAiConversationsListEndpoint,
+    adminAiConversationEndpoint,
+    adminAiConversationUpdateEndpoint,
+    adminAiConversationDeleteEndpoint,
+  ],
   globals: [Header, Footer, SiteSettings],
   plugins,
   secret: process.env.PAYLOAD_SECRET || '',
