@@ -1,7 +1,7 @@
 import { CallToAction } from '@/blocks/CallToAction/config'
 import { Content } from '@/blocks/Content/config'
 import { MediaBlock } from '@/blocks/MediaBlock/config'
-import { generatePreviewPath } from '@/utilities/generatePreviewPath'
+import { generatePreviewPath } from '@/utilities/preview'
 import { CollectionOverride } from '@payloadcms/plugin-ecommerce/types'
 import {
   MetaDescriptionField,
