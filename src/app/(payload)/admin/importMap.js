@@ -26,7 +26,7 @@ import { CompetitorPricesField as CompetitorPricesField_5c69ad1bb6d404e707bfb625
 import { Icon as Icon_a0bd5f2fa532ef2166f77171a2b9828a } from '@/components/Logo/Logo'
 import { Logo as Logo_a0bd5f2fa532ef2166f77171a2b9828a } from '@/components/Logo/Logo'
 import { AIAssistantNavLink as AIAssistantNavLink_42ffa71536783ff9ad01a6d0460db33f } from '@/components/AIAssistant/NavLink'
-import { BeforeDashboard as BeforeDashboard_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
+import { DashboardGreeting as DashboardGreeting_3b143e8444a2422009f662b406d812e6 } from '@/components/AIAssistant/DashboardGreeting'
 import { BeforeLogin as BeforeLogin_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
 import { AIAssistantView as AIAssistantView_82def659f54732198d194a730989cbc5 } from '@/components/AIAssistant/View'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -62,7 +62,7 @@ export const importMap = {
   "@/components/Logo/Logo#Icon": Icon_a0bd5f2fa532ef2166f77171a2b9828a,
   "@/components/Logo/Logo#Logo": Logo_a0bd5f2fa532ef2166f77171a2b9828a,
   "@/components/AIAssistant/NavLink#AIAssistantNavLink": AIAssistantNavLink_42ffa71536783ff9ad01a6d0460db33f,
-  "@/components/BeforeDashboard#BeforeDashboard": BeforeDashboard_1a7510af427896d367a49dbf838d2de6,
+  "@/components/AIAssistant/DashboardGreeting#DashboardGreeting": DashboardGreeting_3b143e8444a2422009f662b406d812e6,
   "@/components/BeforeLogin#BeforeLogin": BeforeLogin_8a7ab0eb7ab5c511aba12e68480bfe5e,
   "@/components/AIAssistant/View#AIAssistantView": AIAssistantView_82def659f54732198d194a730989cbc5,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,

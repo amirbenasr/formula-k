@@ -4,6 +4,10 @@ An AI chat panel inside the Payload admin at **`/admin/ai`** that can answer que
 about stock, products, brands, orders and the loyalty programme — and prepare catalogue
 changes (including whole new products) for a human to approve.
 
+It keeps a saved, GPT-style history: the dashboard greets a signed-in admin with
+"How can I help you today?", the sidebar lists past conversations, and reopening one
+restores the transcript and its proposal cards (see §6).
+
 The goal is to remove the manual loop of opening a product, reading a number, typing a new
 one and saving, one product at a time.
 
@@ -12,11 +16,15 @@ one and saving, one product at a time.
 ## 1. Architecture
 
 ```
+/admin                            src/components/AIAssistant/DashboardGreeting.tsx
+   │  "How can I help you today?" — carries the question to /admin/ai?prompt=…
+   ▼
 /admin/ai                          src/components/AIAssistant/View.tsx   (server, admin-gated)
-   │  chat UI, operation previews, Apply button
+   │  conversation sidebar + chat UI + operation previews + Apply button
    ▼
 POST /api/admin-ai/chat            src/endpoints/adminAi/chat.ts
    │  requires an admin session
+   │  persists the transcript (before the model call and again on stream end)
    │  streamText({ tools, stopWhen: isStepCount(8) })
    │  every tool call runs as the signed-in user
    ▼
@@ -25,6 +33,9 @@ Payload Local API (Postgres)
    │  POST /api/admin-ai/apply      src/endpoints/adminAi/apply.ts
    │  ← the ONLY path that writes to products/brands/variants
    └─ src/lib/ai/apply.ts (single transaction, dispatches on AiActionLog.kind)
+
+GET/PATCH/DELETE /api/admin-ai/conversations[/:key]
+   └─ src/lib/ai/conversations.ts (owner-scoped persistence, title/preview, action statuses)
 ```
 
 Key files:
@@ -38,9 +49,12 @@ Key files:
 | `src/lib/ai/catalogue.ts` | Staging: turns a model request into a validated proposal |
 | `src/lib/ai/tools.ts` | Tool definitions |
 | `src/lib/ai/apply.ts` | Transactional apply + drift detection |
+| `src/lib/ai/conversation-text.ts` | Pure title/preview/key rules (unit-tested) |
+| `src/lib/ai/conversations.ts` | Conversation persistence, ownership, action statuses |
 | `src/collections/AiActionLog.ts` | Staging table and audit trail (`kind` selects the operation) |
+| `src/collections/AiConversations.ts` | Chat history table (hidden from the admin nav) |
 | `src/endpoints/adminAi/*` | HTTP surface |
-| `src/components/AIAssistant/*` | Admin UI |
+| `src/components/AIAssistant/*` | Admin UI (dashboard greeting, sidebar, chat, markdown) |
 
 
 ---
@@ -327,7 +341,108 @@ Reading a failure, in order:
 
 ---
 
-## 6. Adding a tool
+## 6. Conversation history
+
+The assistant keeps a GPT-style history: the sidebar lists past chats, opening
+one restores the full transcript (including tool calls and proposal cards), and a
+turn survives a refresh, a closed tab or a provider failure.
+
+### Storage
+
+`ai-conversations` holds one row per conversation:
+
+| Column | Meaning |
+| --- | --- |
+| `key` | The client-generated UUID shared by `useChat` and `AiActionLog.conversationId` (unique) |
+| `owner` | The admin who owns the chat |
+| `title` | Derived from the first user message; renamable from the sidebar |
+| `preview` | Last text in the transcript, shown under the title |
+| `messages` | The AI SDK `UIMessage[]` transcript, as JSON |
+| `messageCount`, `lastMessageAt` | Cheap sorting/grouping without reading the JSON |
+
+The transcript is stored in the exact shape `useChat` consumes, so reopening a
+chat is `useChat({ messages })` — there is no second schema or part graph to keep
+in sync. Tool calls, their validated outputs and the staged proposal cards are
+therefore restored verbatim.
+
+The collection is `admin.hidden`, because the chat sidebar is the interface; the
+table would otherwise put raw transcript JSON one click from an accidental edit.
+It remains queryable through the Local API and the endpoints below.
+
+### Ownership
+
+A conversation is personal. `src/lib/ai/conversations.ts` filters every read by
+`owner = req.user.id` and additionally refuses a row whose owner is somebody else,
+so the chat endpoint can never append to another admin's history. The collection's
+access rules mirror that: admins may read all rows for audit, but rename and
+delete are owner-only. Conversation ids are never accepted as proof of access.
+
+### When a turn is written
+
+`/api/admin-ai/chat` writes twice:
+
+1. **On arrival**, with the admin's messages. If DeepSeek is down, the API key is
+   missing or the tab closes mid-turn, the question is still in their history.
+2. **In the UI stream's `onEnd`**, with the assistant reply and tool outputs. This
+   runs while the stream is still owned by the request, not racing Response
+   completion.
+
+If a follow-up turn persists before the previous stream's `onEnd` finishes, the
+older, shorter transcript is discarded (`messageCount > messages.length` guard),
+so a slow write cannot delete the newest question.
+
+Aborted streams still save what was streamed, which is why an interrupted answer
+can be reopened and read up to the point of interruption.
+
+### Title and preview
+
+`src/lib/ai/conversation-text.ts` derives both, as pure functions with unit tests:
+
+- The title is the first user message, cut to the first sentence and then a word
+  boundary (70 chars). The `[attached media …]` note is stripped, so an
+  attachment-only turn becomes "Image attachment".
+- The preview is the most recent user/assistant text, collapsed to one line
+  (160 chars).
+- A rename is never overwritten: only the placeholder title is ever replaced.
+
+### HTTP surface
+
+All routes require an admin session (same guard as the chat):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/admin-ai/conversations?limit=100&search=` | Sidebar list, newest first |
+| `GET` | `/api/admin-ai/conversations/:key` | Transcript + proposals for one chat |
+| `PATCH` | `/api/admin-ai/conversations/:key` | Rename (`{ title }`) |
+| `DELETE` | `/api/admin-ai/conversations/:key` | Delete the history row |
+
+`GET /:key` also returns `actions: [{ actionId, status, summary, appliedAt, error }]`
+for every `AiActionLog` row raised in that chat. The UI uses it to render an
+applied proposal as **Applied** instead of showing the Apply button again — a
+replay would be rejected with `409` by `/api/admin-ai/apply`, so the correct state
+is "already done", not "click me again". Deleting a conversation deliberately does
+not delete its action rows: those are the audit trail, and they remain visible in
+the **AI Action Logs** collection.
+
+### Dashboard entry point
+
+`src/components/AIAssistant/DashboardGreeting.tsx` replaces the template
+boilerplate on the admin dashboard. It greets the signed-in admin by name, carries
+a question to `/admin/ai?prompt=…` (auto-sent once the chat mounts), lists the four
+most recent chats, and links to the full assistant. The prompt is removed from the
+URL as soon as it is consumed, so a refresh starts a clean chat rather than
+re-asking the same question.
+
+### Responsive layout
+
+The assistant is a two-pane layout on desktop and a drawer + full-width chat at
+1024px and below. The composer keeps Enter-to-send / Shift+Enter for a newline,
+grows to 180px, offers Stop while streaming, and the transcript only auto-scrolls
+while the reader is already at the bottom.
+
+---
+
+## 7. Adding a tool
 
 Three rules, all learned the hard way:
 
@@ -352,7 +467,7 @@ Three rules, all learned the hard way:
 
 ---
 
-## 7. MCP server (not yet enabled)
+## 8. MCP server (not yet enabled)
 
 `@payloadcms/plugin-mcp@3.72.0` is installed and version-matched, and `package.json`
 carries a `pnpm.overrides` pin for `@modelcontextprotocol/sdk@^1.26.0` that fixes an upstream
@@ -386,7 +501,7 @@ Then register the plugin with `enabled: { find: true }` per collection and flip
 
 ---
 
-## 8. Known limitations
+## 9. Known limitations
 
 - **Orders and rewards are read-only.** Products, brands and stock are writable; orders and
   the loyalty programme are not.
@@ -397,8 +512,13 @@ Then register the plugin with `enabled: { find: true }` per collection and flip
   product; the library and an upload are the reliable paths.
 - **No variants.** The assistant sets `inventory` on simple products. Variant products must
   be set up in the admin panel.
-- **No conversation persistence.** Chat history lives in the browser tab. The durable record
-  is `ai-action-logs`.
+- **Conversations are personal.** Each admin sees their own chats; there is no shared team
+  thread. An admin can read another admin's rows through the API for audit, but not post to
+  them or rename them.
+- **Titles are heuristic.** The first user message is used (first sentence, word-boundary
+  truncation), not a model-generated summary. Rename from the sidebar if that is not enough.
+- **Deleting a chat does not delete its proposals.** `ai-action-logs` is the audit trail and
+  survives the conversation; use the log's status (or the Apply flow) to close a proposal out.
 - **Tool args are validated by zod, not by the provider.** DeepSeek only supports strict
   tool calls on its `/beta` base URL, so malformed arguments are rejected server-side rather
   than upstream.
@@ -407,7 +527,7 @@ Then register the plugin with `enabled: { find: true }` per collection and flip
 
 ---
 
-## 9. Bulk work outside the chat
+## 10. Bulk work outside the chat
 
 For a batch of products the chat is the wrong tool — it caps at 8 steps per turn and asks
 for an approval per proposal. Use a script that drives the same library functions instead:
