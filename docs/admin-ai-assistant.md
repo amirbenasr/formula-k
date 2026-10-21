@@ -113,6 +113,7 @@ AI_THINKING=disabled        # optional; see below
 
 # Web image search (tier 2 of §5a), using Google Images via SerpAPI.
 IMAGE_SEARCH_PROVIDER=serpapi   # serpapi | none
+# SERPAPI_TIMEOUT_MS=90000      # per-attempt ceiling; a cold search takes ~60s
 ```
 
 `SERPAPI_API_KEY` is the same key the competitor-price lookup uses — image search adds no
@@ -261,6 +262,21 @@ it?" months later.
 **Cost.** One SerpAPI search per lookup, and SerpAPI serves an identical query from its cache
 for an hour, which is free and does not count against the quota.
 
+**Timing — the bug worth knowing about.** A *cold* Google Images search takes SerpAPI about a
+minute (measured: 61.53s); a cached one takes about a second. The first version of this used a
+20s timeout, so **every cold search aborted while SerpAPI went on to finish it and record a
+success** — the chat reported "the provider timed out" for a search that had actually worked,
+and the model then "narrowed" the query, starting a second minute-long cold search.
+
+Now: the timeout is 90s (`SERPAPI_TIMEOUT_MS` overrides it), and a timeout triggers **one
+identical retry**. That retry is the point — SerpAPI caches the finished search, so the same
+query comes back almost instantly and for free. A different query would be another cold
+search, which is why the prompt tells the model to retry the *same* query and never to
+shorten or reword it.
+
+The UI shows "Thinking…" for that minute, which is expected. Vercel allows up to 5 minutes for
+the invocation.
+
 **When the media row is created.** Web images are downloaded and inserted at *staging* time,
 not on Apply: the approval panel has to show the actual picture (approving "some URL" blind
 would defeat the review step), and a network call inside `applyAction`'s transaction would
@@ -273,6 +289,41 @@ rows and carries each image's `variantOption` across, so reordering does not qui
 variant product's per-variant pictures. The storefront primary image is simply `gallery[0]`,
 which is why `stage_product_images` has a distinct `set_primary` mode instead of asking the
 model to re-send the whole list.
+
+### 5b. Diagnosing a failed turn
+
+**The request log is not enough.** `/api/admin-ai/chat` streams, so the endpoint returns `200`
+the moment the stream opens and stays open while the tool loop runs. A turn where every search
+failed still shows as `200` in Vercel's request list. The useful record is the console output,
+which Vercel keeps per deployment:
+
+- Vercel dashboard → the project → **Logs** (or `vercel logs <deployment-url>`), then filter on
+  `[ai/chat]` or `[ai/search-images]`.
+
+Three line families, deliberately greppable:
+
+| Line | Answers |
+| --- | --- |
+| `[ai/chat] start conversation=… messages=N` | Did the turn start, and with how much context? |
+| `[ai/chat] tool=find_media args={…} conversation=…` | Which tool ran, with what arguments — this is the actual decision trace |
+| `[ai/chat] done conversation=… elapsed=…ms` | How long the whole turn took |
+| `[ai/search-images] ok query="…" attempt=1 elapsed=61250ms candidates=12` | The search worked; note the elapsed time and how many candidates parsed |
+| `[ai/search-images] fail query="…" attempt=2 elapsed=20001ms timedOut=true status=- — timed out after 20s` | The search failed, and **why**: timeout vs HTTP vs provider error |
+
+Reading a failure, in order:
+
+1. `timedOut=true` and `elapsed` near the timeout → the provider is slow. SerpAPI's dashboard
+   (below) will usually show the search as **Success** with its own `Time Taken`, because it
+   finished after we stopped waiting. Both are true; ours is the client's view.
+2. `status=401` / `status=429` → key or quota, not a search problem.
+3. `candidates=0` on an `ok` line → the search worked but the payload had no usable image
+   (no `original`, or under 300px). The note says so.
+4. No `[ai/search-images]` line at all → the model never called the tool; the prompt or the
+   conversation is the issue.
+
+**Provider side.** serpapi.com → Dashboard → Searches lists every call with `Q`, `Status`,
+`Time Taken`, the search id and a `Json Endpoint`. The `q` there is the same string logged in
+`[ai/search-images]`, which is how you correlate the two when a search is slow.
 
 ---
 
