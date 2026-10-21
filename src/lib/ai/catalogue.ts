@@ -13,28 +13,38 @@
 
 import type { Payload } from 'payload'
 
-import type {
-  BrandFieldInput,
-  ProductFieldInput,
-} from './validate'
+import type { BrandFieldInput, ProductFieldInput } from './validate'
 import {
   describeProductOperation,
   normalizeBrandFields,
   normalizeProductFields,
+  readGalleryRows,
   slugFromTitle,
+  toGalleryRows,
+  type GalleryRow,
 } from './validate'
+import { ImageImportError, importImageFromUrl } from './media-import'
+import { findMediaById } from './media-lookup'
 import type {
   ActionKind,
   AiToolContext,
   FieldDiff,
+  ImageMode,
   LooseDoc,
+  ResolvedImage,
   StagedWrite,
 } from './types'
 
 /** What the chat UI renders for a pending action. */
 export type StagedPreview = {
   diffs: FieldDiff[]
+  /** Resolved images, so the panel shows pictures rather than media ids. */
+  images?: ResolvedImage[]
+  /** Which gallery edit was requested. */
+  mode?: ImageMode
   op: string
+  /** The image that will sit at `gallery[0]`, i.e. the storefront primary. */
+  primary?: ResolvedImage
   /** Populated by `stageProductStatus` so the UI can show the state change. */
   status?: 'draft' | 'published'
   targetKind: 'brand' | 'product'
@@ -222,6 +232,7 @@ export async function stageProductWrite(
   // refused rather than guessed, and an edit never resolves to a variant row.
   let targetId: number | undefined
   let currentTitle: string | undefined
+  let currentGallery: GalleryRow[] = []
 
   if (!isCreate) {
     const { candidates, product: match } = await resolveProductRef(payload, String(id))
@@ -246,9 +257,11 @@ export async function stageProductWrite(
 
     targetId = asId(match.id)
     currentTitle = match.title as string
+    currentGallery = readGalleryRows(match.gallery)
   }
 
   const validated = normalizeProductFields(product, {
+    currentGallery,
     require: isCreate ? ['title', 'brand', 'price'] : [],
   })
 
@@ -555,3 +568,280 @@ export async function stageBrandWrite(
     summary,
   }
 }
+
+/** How many web images one proposal may pull at once. */
+export const MAX_WEB_IMAGES = 3
+
+const unique = (ids: number[]): number[] => [...new Set(ids)]
+
+export type StageProductImagesInput = {
+  id: number | string
+  /** Media already in the library. */
+  mediaIds?: number[]
+  mode?: ImageMode
+  note?: string
+  /** Remote images to download into the library first. */
+  webUrls?: Array<{ credit?: string; pageUrl?: string; title?: string; url: string }>
+}
+
+const imageCount = (count: number): string => `${count} image${count === 1 ? '' : 's'}`
+
+/**
+ * Stages a gallery change: set the primary image, add images, or replace the lot.
+ *
+ * This is the write half of the image pipeline; the resolution order that decides
+ * *which* image lives in `tools.ts` and the system prompt. By the time this runs,
+ * every candidate is a concrete media id.
+ *
+ * Note on ordering: a product's primary image is simply `gallery[0]` — the
+ * storefront renders `gallery[0].image` as the main photo. So `set_primary` moves
+ * one image to the front and leaves the rest untouched, which is why it is not
+ * just "replace with a one-item list".
+ *
+ * Note on when media rows are created: web images are downloaded and inserted
+ * into the media library here, at staging time, not at apply time. The approval
+ * panel has to show the actual picture — approving "some URL" blind would defeat
+ * the point of the review step — and downloading inside `applyAction`'s
+ * transaction would mean a network call holding a database transaction open.
+ * The trade-off is that a rejected proposal leaves an unused media row, which is
+ * harmless: it sits in the library, correctly credited, and can be reused.
+ */
+export async function stageProductImages(
+  context: AiToolContext,
+  { id, mediaIds, mode = 'set_primary', webUrls }: StageProductImagesInput,
+): Promise<StageResult> {
+  const { payload } = context
+  const problems: string[] = []
+
+  const { candidates, product } = await resolveProductRef(payload, String(id))
+
+  if (candidates.length === 0) {
+    return {
+      problems: [`No product matched "${id}". Use find_products to get its id or slug first.`],
+      staged: false,
+    }
+  }
+
+  if (!product) {
+    return {
+      problems: [
+        `"${id}" matched ${candidates.length} products (${describeCandidates(
+          candidates,
+        )}). Pass the numeric product id to be unambiguous.`,
+      ],
+      staged: false,
+    }
+  }
+
+  const productId = asId(product.id)
+
+  if (productId === undefined) {
+    return { problems: [`Product "${id}" has no numeric id.`], staged: false }
+  }
+
+  const productTitle = String(product.title ?? '')
+  const currentRows = readGalleryRows(product.gallery)
+  const currentIds = currentRows.map((row) => row.image)
+
+  /** Images that will be attached, in the order the model listed them. */
+  const resolved: ResolvedImage[] = []
+
+  // Tier 1 and 2 land here as plain media ids: an image the admin attached in
+  // the chat, or one `find_media` matched in the library.
+  for (const mediaId of unique(mediaIds ?? [])) {
+    const doc = await findMediaById(payload, context.user, mediaId)
+
+    if (!doc) {
+      problems.push(`Media id ${mediaId} does not exist. Use find_media to look up a real one.`)
+      continue
+    }
+
+    resolved.push({
+      alt: typeof doc.alt === 'string' ? doc.alt : undefined,
+      credit: typeof doc.credit === 'string' ? doc.credit : undefined,
+      id: mediaId,
+      source: typeof doc.source === 'string' ? doc.source : undefined,
+      sourceUrl: typeof doc.sourceUrl === 'string' ? doc.sourceUrl : undefined,
+      url: typeof doc.url === 'string' ? doc.url : undefined,
+    })
+  }
+
+  // Tier 3: pull each remote image into the library now.
+  for (const candidate of (webUrls ?? []).slice(0, MAX_WEB_IMAGES)) {
+    const alt = candidate.title?.trim() || `${productTitle} — product image`
+
+    try {
+      resolved.push(
+        await importImageFromUrl({
+          alt,
+          credit: candidate.credit,
+          payload,
+          sourcePageUrl: candidate.pageUrl,
+          url: candidate.url,
+          user: context.user,
+        }),
+      )
+    } catch (error) {
+      problems.push(
+        error instanceof ImageImportError
+          ? error.message
+          : `Could not import the image at ${candidate.url}.`,
+      )
+    }
+  }
+
+  if (resolved.length === 0) {
+    return {
+      problems:
+        problems.length > 0
+          ? problems
+          : ['Nothing to attach — pass media ids from the library or web image URLs.'],
+      staged: false,
+    }
+  }
+
+  const incoming = resolved.map((image) => image.id)
+
+  // Replacing is destructive, so it is all-or-nothing: if one of the requested
+  // images failed to resolve, staging the rest would shrink the gallery without
+  // the admin ever being told which picture is now missing.
+  if (mode === 'replace' && problems.length > 0) {
+    return {
+      problems: [
+        ...problems,
+        'The gallery was not replaced, because not every requested image could be resolved. Stage the ones that worked with mode "append", or fix them and try again.',
+      ],
+      staged: false,
+    }
+  }
+
+  const nextIds =
+    mode === 'replace'
+      ? unique(incoming)
+      : mode === 'append'
+        ? unique([...currentIds, ...incoming])
+        : // set_primary: the new image first, every existing image kept behind it.
+          unique([...incoming, ...currentIds])
+
+  if (nextIds.length === 0) {
+    return { problems: ['The gallery cannot be empty.'], staged: false }
+  }
+
+  // Nothing to do is worth saying out loud rather than staging a no-op proposal.
+  const unchanged =
+    nextIds.length === currentIds.length && nextIds.every((id, index) => id === currentIds[index])
+
+  if (unchanged) {
+    return {
+      problems: [
+        mode === 'append'
+          ? `"${productTitle}" already has every one of those images — nothing to add.`
+          : `"${productTitle}" already has that image as its primary image — nothing to change.`,
+      ],
+      staged: false,
+    }
+  }
+
+  const nextRows = toGalleryRows(nextIds, currentRows)
+
+  /**
+   * Resolves the media rows for the *resulting* gallery, not just the new
+   * images, so the approval panel can show the gallery exactly as it will look
+   * — primary first, existing images included. A handful of extra reads, and the
+   * only way an admin can tell whether the proposal is right.
+   */
+  const cache = new Map<number, ResolvedImage>(resolved.map((image) => [image.id, image]))
+
+  const describe = async (id: number): Promise<ResolvedImage | null> => {
+    const cached = cache.get(id)
+    if (cached) return cached
+
+    const doc = await findMediaById(payload, context.user, id)
+    if (!doc) return null
+
+    const image: ResolvedImage = {
+      alt: typeof doc.alt === 'string' ? doc.alt : undefined,
+      credit: typeof doc.credit === 'string' ? doc.credit : undefined,
+      id,
+      source: typeof doc.source === 'string' ? doc.source : undefined,
+      sourceUrl: typeof doc.sourceUrl === 'string' ? doc.sourceUrl : undefined,
+      url: typeof doc.url === 'string' ? doc.url : undefined,
+    }
+
+    cache.set(id, image)
+
+    return image
+  }
+
+  const gallery: ResolvedImage[] = []
+  const missing: number[] = []
+
+  for (const row of nextRows) {
+    const image = await describe(row.image)
+
+    if (!image) {
+      missing.push(row.image)
+      continue
+    }
+
+    gallery.push(incoming.includes(row.image) ? { ...image, added: true } : { ...image })
+  }
+
+  if (missing.length > 0) {
+    return {
+      problems: [
+        ...problems,
+        `Media ${missing.map((id) => `#${id}`).join(', ')} no longer exists, so nothing was staged. Look the image up again with find_media.`,
+      ],
+      staged: false,
+    }
+  }
+
+  const primaryImage = gallery[0]
+
+  const summary =
+    mode === 'set_primary'
+      ? `Set primary image of "${productTitle}"`
+      : mode === 'append'
+        ? `Add ${imageCount(resolved.length)} to "${productTitle}"`
+        : `Replace gallery of "${productTitle}" with ${imageCount(nextIds.length)}`
+
+  const write: StagedWrite = {
+    fields: { gallery: nextRows },
+    op: 'update',
+    slug: typeof product.slug === 'string' ? product.slug : undefined,
+    targetId: productId,
+    targetKind: 'product',
+  }
+
+  const actionId = await logStage(context, {
+    changes: write,
+    kind: 'product',
+    summary,
+    toolName: 'stage_product_images',
+  })
+
+  return {
+    actionId,
+    kind: 'product',
+    preview: {
+      diffs: [
+        {
+          from: imageCount(currentIds.length),
+          label: 'Gallery',
+          to: imageCount(nextIds.length),
+        },
+      ],
+      images: gallery,
+      mode,
+      op: 'update',
+      ...(primaryImage ? { primary: primaryImage } : {}),
+      targetKind: 'product',
+      title: productTitle,
+    },
+    ...(problems.length > 0 ? { problems } : {}),
+    staged: true,
+    summary,
+  }
+}
+

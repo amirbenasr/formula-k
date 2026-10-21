@@ -426,6 +426,9 @@ export interface Product {
  */
 export interface Media {
   id: number;
+  /**
+   * Describes the image for screen readers and search engines. The AI assistant also matches on this text, so include the product and brand name.
+   */
   alt: string;
   caption?: {
     root: {
@@ -442,6 +445,18 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Where this file came from. Web images are not official brand assets.
+   */
+  source?: ('upload' | 'web' | 'seed') | null;
+  /**
+   * The page or file the image was downloaded from.
+   */
+  sourceUrl?: string | null;
+  /**
+   * Author and licence, e.g. "Jane Doe · CC BY 4.0". Required by most Creative Commons licences when the image is published.
+   */
+  credit?: string | null;
   prefix?: string | null;
   _objectKey?: string | null;
   updatedAt: string;
@@ -1793,6 +1808,9 @@ export interface BrandsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  source?: T;
+  sourceUrl?: T;
+  credit?: T;
   prefix?: T;
   _objectKey?: T;
   updatedAt?: T;

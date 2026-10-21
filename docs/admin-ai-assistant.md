@@ -110,7 +110,15 @@ Add to `.env`:
 DEEPSEEK_API_KEY=sk-...
 AI_MODEL=deepseek-flash     # optional; alias currently serving V4.1 Flash
 AI_THINKING=disabled        # optional; see below
+
+# Web image search (tier 2 of §5a). All optional — both providers work keyless.
+IMAGE_SEARCH_PROVIDER=auto  # auto | openverse | commons | none
+OPENVERSE_TOKEN=...         # optional; raises Openverse's anonymous rate limit
 ```
+
+`IMAGE_SEARCH_PROVIDER=auto` tries Openverse, then Wikimedia Commons. `none` makes
+`search_web_images` return an explanatory note instead of searching, which is the right
+setting if you want product images to come only from the media library.
 
 ### Why thinking is disabled
 
@@ -135,6 +143,8 @@ predictable. Set `AI_THINKING=enabled` to opt back in.
 | --- | --- |
 | `find_products` | Search the catalogue by title/slug, with stock and variants |
 | `find_brands` | Search brands by title/slug — used to get a brand id before assigning one |
+| `find_media` | Rank the store's existing images against a product name (0–1 scores) |
+| `search_web_images` | Find candidate photos on the web, openly licensed only |
 | `get_inventory` | Exact stock for one product or variant, with all matches |
 | `inventory_report` | Whole-catalogue stock; `lowStockBelow` for restock lists |
 | `list_orders` | Recent orders, filtered by status or customer email |
@@ -149,6 +159,7 @@ predictable. Set `AI_THINKING=enabled` to opt back in.
 | `stage_product_create` | Proposes a new product (title, brand, price, stock, status, …) |
 | `stage_product_update` | Proposes edits to an existing product; partial patches |
 | `stage_product_publish` | Proposes publishing to the storefront, or moving back to draft |
+| `stage_product_images` | Proposes the primary image, an append, or a gallery replace |
 | `stage_brand_create` | Proposes a new brand (required before a product can reference it) |
 | `stage_brand_update` | Proposes brand edits (title, slug, description, logo) |
 | `stage_inventory_update` | Proposes absolute (`quantity`) or relative (`delta`) stock changes |
@@ -158,9 +169,9 @@ predictable. Set `AI_THINKING=enabled` to opt back in.
 - **Delete** anything. `archive` (`publish: false`) moves a product back to draft, which is
   reversible and already invisible to customers. Removing a row would pull it out of
   historical orders and reports, so it is left to a human in the admin panel.
-- **Upload images.** A product created by the assistant has an empty gallery until someone
-  adds media, because production media lives in R2 and the assistant has no upload path.
-  The system prompt tells it to say so rather than implying the page is finished.
+- **See images.** DeepSeek is text-only, so the assistant cannot look at a photo, judge its
+  quality, or compare two candidates. It moves ids and URLs around; a human reviews the
+  thumbnails in the proposal. See §5a for how images are resolved.
 - **Assign variants.** Variant products must be set up in the admin panel; the assistant
   writes `inventory` on simple products only.
 
@@ -183,6 +194,69 @@ stage_product_create { title, brand: 28, price: 1, inventory: 9, status: 'publis
 If the brand does not exist yet, the brand is proposed first and the product has to wait
 until that proposal is approved — a product cannot point at a brand id that does not exist.
 
+### 5a. How images are resolved
+
+The assistant cannot receive image bytes, so an image is always resolved to a **media id**
+before it touches a product. Resolution walks four tiers, cheapest and safest first. The
+order is enforced by the tools plus the system prompt, not by luck:
+
+| Tier | Source | Cost | What it means |
+| --- | --- | --- | --- |
+| 0 | Attached in the chat | free | The admin picked the file. Uploaded immediately, id passed to the model |
+| 1 | `find_media` (own library) | free | Already licensed, usually the brand's own packshot. Score ≥ 0.6 is a real match |
+| 2 | `search_web_images` | slow | Openly licensed but generic — often not this product at all |
+| — | Never | — | The model may not invent a URL. Only ids from tier 0/1, or URLs returned by tier 2 |
+
+**Tier 0 — attachment.** `Chat.tsx` posts the file to Payload's own `/api/media` endpoint
+(multipart `file` + `alt`; `alt` is required by the collection). It waits for the JSON
+response, then appends a `[attached media id=42 alt="…"]` marker to the message. The marker
+is stripped from the rendered bubble but kept in the stored message, because it is how the
+model learns which image "this one" refers to. The image is never sent to DeepSeek.
+
+**Tier 1 — the library.** `find_media` fetches the 200 most recent media rows and scores
+them in JS: exact alt text (1.0), exact filename (0.95), whole-word containment (0.9), then
+token coverage with prefix matches at 0.8. Postgres `contains` alone cannot match "anua
+toner" against "Anua Heartleaf 77% Soothing Toner 250ml", which is why the scoring is fuzzy
+and why it is unit-tested without a database.
+
+**Tier 2 — the web.** No image-search API key exists in this project, so both providers are
+keyless: **Openverse** (CC/public-domain, better titles) with **Wikimedia Commons** as
+fallback. Both are AND-matched, so a five-word product name returns zero results and the
+query is relaxed to its last two or three product words. Relaxed results are labelled
+`relaxed: true` and the system prompt requires the assistant to say the image is topically
+related rather than *this* product. Candidates are re-ranked by title/tag overlap so a search
+for "toner" does not put printer cartridges first.
+
+This tier is genuinely weak for branded cosmetics: "anua heartleaf toner bottle" returns
+nothing, and "serum bottle" returns a blood-transfusion painting and a pig-cholera plant.
+**The reliable path is to upload the packshot or reuse a library image.** Put the official
+product photos in the media library with a descriptive `alt` (product + brand name) and tier
+1 will find them. Set `IMAGE_SEARCH_PROVIDER=none` to switch tier 2 off entirely.
+
+Downloading is defensive, because the URL is model-influenced: only public http(s) is
+allowed (loopback, private ranges and link-local metadata endpoints are rejected before and
+after redirects), content must be `image/*` under 10 MB, and the bytes must decode through
+`sharp` before they reach storage. The storage plugin decides where they land — R2 when
+`R2_*` is valid, `public/media` otherwise — so `payload.create` is the only writer.
+
+**Provenance.** Web-sourced media rows carry `source: 'web'`, the origin page in
+`sourceUrl`, and the author/licence in `credit`. Without those three fields a stock photo is
+indistinguishable from a real product photo, and nobody can answer "where did this come from,
+and may we use it?" months later. The approval panel shows the thumbnail, the source and the
+licence for exactly this reason.
+
+**When the media row is created.** Web images are downloaded and inserted at *staging* time,
+not on Apply: the approval panel has to show the actual picture (approving "some URL" blind
+would defeat the review step), and a network call inside `applyAction`'s transaction would
+hold a database transaction open across a remote fetch. The trade-off is that rejecting a
+proposal leaves an unused, correctly-credited media row in the library.
+
+**Gallery shape.** `products.gallery` is an **array of `{ image, variantOption }`** objects,
+not a `hasMany` upload list. The model supplies ordered media ids; `validate.ts` maps them to
+rows and carries each image's `variantOption` across, so reordering does not quietly unbind a
+variant product's per-variant pictures. The storefront primary image is simply `gallery[0]`,
+which is why `stage_product_images` has a distinct `set_primary` mode instead of asking the
+model to re-send the whole list.
 
 ---
 
@@ -203,10 +277,11 @@ Three rules, all learned the hard way:
 3. **Validate in `validate.ts`, not in the tool.** Field rules live in `PRODUCT_RULES` /
    `BRAND_RULES` so they can be unit-tested without a database, and so apply writes exactly
    the object staging checked. The tool should only translate a model request into
-   `stage*()` calls. Note the asymmetry the tests pin down: `price` maps to
+   `stage*()` calls. Note the asymmetries the tests pin down: `price` maps to
    `priceInUSD` **plus** `priceInUSDEnabled: true` (a price without its currency flag is
-   invisible in the admin), while `brand` is a single relationship and must be written as a
-   number, not an array.
+   invisible in the admin), `brand` is a single relationship and must be written as a
+   number, not an array — and `gallery` is the reverse, an array of `{ image, variantOption }`
+   rows, so the model's ordered media ids are mapped rather than passed through.
 
 ---
 
@@ -248,8 +323,11 @@ Then register the plugin with `enabled: { find: true }` per collection and flip
 
 - **Orders and rewards are read-only.** Products, brands and stock are writable; orders and
   the loyalty programme are not.
-- **No delete, and no media upload.** Archive (back to draft) is the assistant's only
-  removal, and a created product starts with an empty gallery.
+- **No delete.** Archive (back to draft) is the assistant's only removal.
+- **Images are chosen blind.** The assistant can attach, promote and reorder images, but it
+  cannot see them, so it cannot tell a good photo from a bad one — a human reviews the
+  thumbnails in the proposal. Web-sourced images (§5a) are generic and often the wrong
+  product; the library and an upload are the reliable paths.
 - **No variants.** The assistant sets `inventory` on simple products. Variant products must
   be set up in the admin panel.
 - **No conversation persistence.** Chat history lives in the browser tab. The durable record

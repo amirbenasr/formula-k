@@ -3,6 +3,7 @@ import * as migration_20260930_172310_sync_schema_drift from './20260930_172310_
 import * as migration_20260930_184201_add_ai_action_kind from './20260930_184201_add_ai_action_kind';
 import * as migration_20261001_095758_add_media_object_key from './20261001_095758_add_media_object_key';
 import * as migration_20261002_082431_competitor_prices from './20261002_082431_competitor_prices';
+import * as migration_20261021_104936_add_media_provenance from './20261021_104936_add_media_provenance';
 
 export const migrations = [
   {
@@ -29,5 +30,10 @@ export const migrations = [
     up: migration_20261002_082431_competitor_prices.up,
     down: migration_20261002_082431_competitor_prices.down,
     name: '20261002_082431_competitor_prices'
+  },
+  {
+    up: migration_20261021_104936_add_media_provenance.up,
+    down: migration_20261021_104936_add_media_provenance.down,
+    name: '20261021_104936_add_media_provenance'
   },
 ];

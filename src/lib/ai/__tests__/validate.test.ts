@@ -6,7 +6,9 @@ import {
   normalizeProductFields,
   normalizeSlug,
   plainTextToRichText,
+  readGalleryRows,
   slugFromTitle,
+  toGalleryRows,
 } from '../validate'
 
 describe('normalizeSlug', () => {
@@ -234,5 +236,139 @@ describe('normalizeBrandFields', () => {
     if (result.ok) return
 
     expect(result.errors).toEqual(['No fields to write — supply at least one field to change.'])
+  })
+
+  /**
+   * `logo` is a single upload relation, so an array here would be rejected by the
+   * collection — a bug this suite exists to keep from coming back.
+   */
+  it('writes a brand logo as a single media id, not an array', () => {
+    const result = normalizeBrandFields({ logo: 12 })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.result.fields.logo).toBe(12)
+    expect(result.result.diffs).toEqual([{ label: 'Logo', to: 'Media #12' }])
+  })
+})
+
+describe('readGalleryRows', () => {
+  it('reads ids from a flat array of ids', () => {
+    expect(readGalleryRows([3, 7])).toEqual([{ image: 3 }, { image: 7 }])
+  })
+
+  it('reads rows whose image is a populated media document', () => {
+    expect(readGalleryRows([{ id: 'row1', image: { id: 5, url: '/x.jpg' } }])).toEqual([
+      { image: 5 },
+    ])
+  })
+
+  it('keeps the variantOption binding', () => {
+    expect(readGalleryRows([{ image: 5, variantOption: 9 }])).toEqual([
+      { image: 5, variantOption: 9 },
+    ])
+  })
+
+  it('skips rows with no usable image', () => {
+    expect(readGalleryRows([{ variantOption: 9 }, null, 'nope', { image: 0 }])).toEqual([])
+  })
+
+  it('returns an empty list for a non-array', () => {
+    expect(readGalleryRows(null)).toEqual([])
+    expect(readGalleryRows(undefined)).toEqual([])
+  })
+})
+
+describe('toGalleryRows', () => {
+  it('builds the object rows the collection actually stores', () => {
+    expect(toGalleryRows([4, 2])).toEqual([{ image: 4 }, { image: 2 }])
+  })
+
+  it('preserves variant bindings for images that survive a reorder', () => {
+    const current = [
+      { image: 4, variantOption: 11 },
+      { image: 2 },
+    ]
+
+    expect(toGalleryRows([2, 4], current)).toEqual([{ image: 2 }, { image: 4, variantOption: 11 }])
+  })
+
+  it('drops the binding of an image that is no longer listed', () => {
+    expect(toGalleryRows([9], [{ image: 4, variantOption: 11 }])).toEqual([{ image: 9 }])
+  })
+})
+
+describe('normalizeProductFields — gallery', () => {
+  it('maps media ids to the array-of-objects shape', () => {
+    const result = normalizeProductFields({ gallery: [12, 8] })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    // The whole point of the fix: a flat `[12, 8]` here would store nothing.
+    expect(result.result.fields.gallery).toEqual([{ image: 12 }, { image: 8 }])
+  })
+
+  it('carries variantOption over when editing an existing gallery', () => {
+    const result = normalizeProductFields(
+      { gallery: [8, 12] },
+      { currentGallery: [{ image: 12, variantOption: 4 }] },
+    )
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.result.fields.gallery).toEqual([{ image: 8 }, { image: 12, variantOption: 4 }])
+  })
+
+  it('reports a readable gallery diff instead of raw JSON', () => {
+    const result = normalizeProductFields(
+      { gallery: [1, 2] },
+      { currentGallery: [{ image: 3 }] },
+    )
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.result.diffs).toEqual([{ from: '1 image', label: 'Gallery', to: '2 images' }])
+  })
+
+  it('rejects an empty gallery because the collection requires one row', () => {
+    const result = normalizeProductFields({ gallery: [] })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+
+    expect(result.errors).toEqual([
+      '"gallery" must keep at least one image — a product without a picture is rejected by the collection.',
+    ])
+  })
+
+  it('rejects non-numeric media ids', () => {
+    const result = normalizeProductFields({ gallery: ['nope'] })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+
+    expect(result.errors).toEqual(['"gallery" must contain positive numeric media ids only.'])
+  })
+
+  it('deduplicates repeated media ids', () => {
+    const result = normalizeProductFields({ gallery: [5, 5, 6] })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.result.fields.gallery).toEqual([{ image: 5 }, { image: 6 }])
+  })
+
+  it('accepts populated media objects from a previous read', () => {
+    const result = normalizeProductFields({ gallery: [{ id: 7 }] as unknown as number[] })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.result.fields.gallery).toEqual([{ image: 7 }])
   })
 })
