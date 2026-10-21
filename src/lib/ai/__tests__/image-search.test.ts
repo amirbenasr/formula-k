@@ -113,6 +113,7 @@ describe('searchWebImages', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('reports a disabled provider without touching the network', async () => {
@@ -177,6 +178,132 @@ describe('searchWebImages', () => {
     const result = await searchWebImages('anua toner')
 
     expect(result.candidates).toEqual([])
-    expect(result.note).toMatch(/Could not reach the image search provider/)
+    expect(result.timedOut).toBe(false)
+    expect(result.note).toMatch(/could not be reached/)
+  })
+
+  /**
+   * The bug this suite was extended for.
+   *
+   * A cold Google Images search takes SerpAPI about a minute. The original 20s
+   * timeout aborted every one of them, so the chat reported a provider timeout
+   * while SerpAPI recorded a success — a failure that never happened. SerpAPI
+   * finishes and caches the search even after we hang up, so one identical retry
+   * is both correct and cheap.
+   */
+  describe('timeouts', () => {
+    const result = {
+      images_results: [
+        {
+          original: 'https://anua.com/cdn/shop/files/toner.jpg',
+          original_height: 1200,
+          original_width: 1200,
+          source: 'Anua',
+          title: 'Anua Heartleaf Toner',
+        },
+      ],
+    }
+
+    const timeout = () =>
+      Object.assign(new Error('The operation was aborted due to timeout'), {
+        name: 'TimeoutError',
+      })
+
+    const stub = (handler: (url: string, attempt: number) => Response | Promise<Response>) => {
+      const urls: string[] = []
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: unknown) => {
+          urls.push(String(input))
+
+          return handler(String(input), urls.length)
+        }),
+      )
+
+      return urls
+    }
+
+    const apiKey = () => {
+      vi.stubEnv('IMAGE_SEARCH_PROVIDER', 'serpapi')
+      vi.stubEnv('SERPAPI_API_KEY', 'test-key')
+    }
+
+    it('retries the identical query once after a timeout, and succeeds on the cached result', async () => {
+      apiKey()
+
+      const urls = stub((_url, attempt) => {
+        if (attempt === 1) throw timeout()
+        return new Response(JSON.stringify(result), { status: 200 })
+      })
+
+      const search = await searchWebImages('anua toner')
+
+      expect(urls).toHaveLength(2)
+      // The retry must be the same request: a different query would be another
+      // minute-long cold search instead of a cache hit.
+      expect(urls[0]).toBe(urls[1])
+      expect(search.candidates).toHaveLength(1)
+      expect(search.timedOut).toBeUndefined()
+      expect(typeof search.elapsedMs).toBe('number')
+    })
+
+    it('reports a timeout as a timeout, not as "no results"', async () => {
+      apiKey()
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      stub(() => {
+        throw timeout()
+      })
+
+      const search = await searchWebImages('anua toner')
+
+      expect(search.candidates).toEqual([])
+      expect(search.timedOut).toBe(true)
+      expect(search.note).toMatch(/timed out/)
+      expect(search.note).toMatch(/retry the SAME query/)
+    })
+
+    it('tries exactly twice, then stops', async () => {
+      apiKey()
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const urls = stub(() => {
+        throw timeout()
+      })
+
+      await searchWebImages('anua toner')
+
+      expect(urls).toHaveLength(2)
+    })
+
+    it('does not retry an HTTP error, because repeating it only burns quota', async () => {
+      apiKey()
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const urls = stub(() => new Response('nope', { status: 500 }))
+
+      const search = await searchWebImages('anua toner')
+
+      expect(urls).toHaveLength(1)
+      expect(search.timedOut).toBe(false)
+      expect(search.note).toMatch(/HTTP 500/)
+    })
+
+    it('logs every attempt with the query, elapsed time and outcome', async () => {
+      apiKey()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      stub(() => {
+        throw timeout()
+      })
+
+      await searchWebImages('anua toner')
+
+      expect(warn).toHaveBeenCalledTimes(2)
+      expect(warn.mock.calls[0][0]).toMatch(/\[ai\/search-images\] fail query="anua toner"/)
+      expect(warn.mock.calls[0][0]).toMatch(/elapsed=\d+ms/)
+      expect(warn.mock.calls[0][0]).toMatch(/timedOut=true/)
+    })
   })
 })

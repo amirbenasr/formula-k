@@ -55,9 +55,32 @@ export const adminAiChatEndpoint: Endpoint = {
     // tool can escalate beyond the caller.
     const tools = buildTools({ conversationId, payload: req.payload, user: admin })
 
+    const startedAt = Date.now()
+
+    /**
+     * Observability.
+     *
+     * A failed turn used to be invisible: the endpoint returns 200 as soon as the
+     * stream opens, so Vercel's request log shows a success even when a tool
+     * failed or the model gave up. These three lines make the tool loop readable
+     * in the function logs, which is where you look when the chat says "I
+     * couldn't" and you need to know whether the provider, the tool or the model
+     * was at fault. Tool arguments are logged (they are the useful part, and this
+     * is an admin-only surface); the admin's message text is not.
+     */
     const result = streamText({
       messages: await convertToModelMessages(messages),
       model: getChatModel(),
+      onError: ({ error }) => {
+        console.error(`[ai/chat] stream error conversation=${conversationId}:`, error)
+      },
+      onStepFinish: ({ toolCalls }) => {
+        for (const call of toolCalls) {
+          console.info(
+            `[ai/chat] tool=${call.toolName} args=${JSON.stringify(call.input ?? {}).slice(0, 240)} conversation=${conversationId}`,
+          )
+        }
+      },
       providerOptions: thinkingProviderOptions(),
       // Bounded so a confused model cannot spin indefinitely against the database.
       stopWhen: isStepCount(8),
@@ -65,8 +88,18 @@ export const adminAiChatEndpoint: Endpoint = {
       tools,
     })
 
+    console.info(`[ai/chat] start conversation=${conversationId} messages=${messages.length}`)
+
     return createUIMessageStreamResponse({
-      stream: toUIMessageStream({ stream: result.stream, tools }),
+      stream: toUIMessageStream({
+        onFinish: () => {
+          console.info(
+            `[ai/chat] done conversation=${conversationId} elapsed=${Date.now() - startedAt}ms`,
+          )
+        },
+        stream: result.stream,
+        tools,
+      }),
     })
   },
 }

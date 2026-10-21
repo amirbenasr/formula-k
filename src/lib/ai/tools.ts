@@ -347,19 +347,23 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
 
     search_web_images: tool({
       description:
-        "Find candidate photos on the web via Google Images. Only call this when find_media found no plausible match AND the admin did not supply an image. Prefer results where `isProduct` is true and the `credit` is the brand's own site. These are photos from third-party pages, not licensed assets, so the admin must confirm the choice. Returns image URLs to pass to stage_product_images.",
+        "Find candidate photos on the web via Google Images. Only call this when find_media found no plausible match AND the admin did not supply an image. A cold search takes about a minute — that is normal, not a failure. Prefer results where `isProduct` is true and the `credit` is the brand's own site. These are photos from third-party pages, not licensed assets, so the admin must confirm the choice. Returns image URLs to pass to stage_product_images.",
       inputSchema: searchWebImagesSchema,
       execute: async ({ limit = 6, query }: SearchWebImagesInput) => {
-        const { candidates, note, provider } = await searchWebImages(query, limit)
+        const { candidates, elapsedMs, note, provider, timedOut } = await searchWebImages(query, limit)
 
         return {
           candidates,
+          elapsedMs,
           hint:
-            candidates.length === 0
-              ? 'No web candidates. Ask the admin to upload an image instead of guessing a URL.'
-              : 'Pick the candidate whose source is the brand itself (check `credit`) and whose title matches the product, then stage it with stage_product_images (webUrls). Pass url, pageUrl, fallbackUrl, title and credit together so the download can fall back and the media row is credited.',
+            candidates.length > 0
+              ? 'Pick the candidate whose source is the brand itself (check `credit`) and whose title matches the product, then stage it with stage_product_images (webUrls). Pass url, pageUrl, fallbackUrl, title and credit together so the download can fall back and the media row is credited.'
+              : timedOut
+                ? 'This is a provider timeout, NOT "no results" — the search was still running when we stopped waiting. Retry search_web_images with the SAME query once; a finished search is cached, so the retry is usually instant. Do not shorten, reword or translate the query: a different query starts another minute-long cold search.'
+                : 'No web candidates. Ask the admin to upload an image instead of guessing a URL.',
           note,
           provider,
+          timedOut: timedOut ?? false,
           warning:
             "These are third-party copyrighted photos, not licensed stock. The source is recorded and the admin approves the image, but confirming the store may publish it is the admin's call.",
         }

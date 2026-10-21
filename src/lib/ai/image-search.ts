@@ -62,15 +62,109 @@ export type WebImageCandidate = {
 
 export type WebImageSearch = {
   candidates: WebImageCandidate[]
+  /** How long the whole lookup took, including a retry. Logged for diagnosis. */
+  elapsedMs?: number
   /** Why the search came back empty, or a caveat worth passing to the admin. */
   note?: string
   provider: string
+  /**
+   * True when the provider was still working when we stopped waiting. That is a
+   * very different situation from "no results", and the caller must not treat the
+   * empty list as an answer.
+   */
+  timedOut?: boolean
 }
 
 const ENDPOINT = 'https://serpapi.com/search.json'
 
-/** Google can be slow to render an image page; the competitor lookup uses 20s too. */
-const TIMEOUT_MS = 20_000
+/**
+ * How long to wait for one Google Images search.
+ *
+ * Measured, not guessed. A **cold** search for a specific product takes SerpAPI
+ * around a minute (observed: 61.53s) because it renders a real Google Images
+ * page. The first version of this used 20s, so every cold search aborted while
+ * SerpAPI went on to finish it and record a success — the chat reported a
+ * provider timeout for a search that actually worked.
+ *
+ * Override with `SERPAPI_TIMEOUT_MS` if a slower market needs more headroom.
+ */
+const DEFAULT_TIMEOUT_MS = 90_000
+
+const MIN_TIMEOUT_MS = 5_000
+
+/** Reads the configured timeout, ignoring a nonsense override. */
+export function searchTimeoutMs(): number {
+  const raw = Number(process.env.SERPAPI_TIMEOUT_MS ?? '')
+
+  return Number.isFinite(raw) && raw >= MIN_TIMEOUT_MS ? raw : DEFAULT_TIMEOUT_MS
+}
+
+/**
+ * One retry, and only after a timeout.
+ *
+ * This is not a naive "try again": SerpAPI keeps searching after our socket
+ * closes and then **caches the finished search**, so an identical retry is usually
+ * served from cache in about a second — and a cached search is free and does not
+ * count against the quota. Retrying with a *different* query would start another
+ * minute-long cold search, which is exactly what the model did before this
+ * existed: it "narrowed" the query and paid for a second 60s search.
+ *
+ * A 401/429/500 is not retried: repeating it just burns quota.
+ */
+const MAX_ATTEMPTS = 2
+
+/** SerpAPI's `AbortSignal.timeout` rejection is a DOMException named TimeoutError. */
+const isTimeout = (error: unknown): boolean =>
+  error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+
+type SearchAttempt =
+  | { body: unknown; ok: true }
+  | { message: string; ok: false; retryable: boolean; status?: number; timedOut: boolean }
+
+/** One request to the provider, with every failure mode normalised. */
+async function requestImages(url: URL, timeoutMs: number): Promise<SearchAttempt> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+
+    if (!response.ok) {
+      return {
+        message: `HTTP ${response.status}`,
+        ok: false,
+        retryable: false,
+        status: response.status,
+        timedOut: false,
+      }
+    }
+
+    const body: unknown = await response.json().catch(() => null)
+
+    // SerpAPI answers 200 with an `error` string for a bad key or exhausted quota.
+    const providerError = (body as { error?: unknown } | null)?.error
+
+    if (typeof providerError === 'string' && providerError.length > 0) {
+      return {
+        message: `rejected the request: ${providerError}`,
+        ok: false,
+        retryable: false,
+        timedOut: false,
+      }
+    }
+
+    return { body, ok: true }
+  } catch (error) {
+    const timedOut = isTimeout(error)
+
+    return {
+      message: timedOut
+        ? `timed out after ${Math.round(timeoutMs / 1000)}s`
+        : `could not be reached (${error instanceof Error ? error.message : String(error)})`,
+      ok: false,
+      // A network blip is worth one more try; a timeout certainly is.
+      retryable: true,
+      timedOut,
+    }
+  }
+}
 
 /**
  * Rejects results whose "original" is really a thumbnail.
@@ -222,43 +316,65 @@ export async function searchWebImages(query: string, limit = 8): Promise<WebImag
   url.searchParams.set('imgsz', '2mp')
   url.searchParams.set('safe', 'active')
 
-  let response: Response
+  const timeoutMs = searchTimeoutMs()
+  const startedAt = Date.now()
+  let attemptNumber = 0
+  let lastFailure: Extract<SearchAttempt, { ok: false }> | undefined
 
-  try {
-    response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
-  } catch (error) {
-    return {
-      candidates: [],
-      note: `Could not reach the image search provider (${error instanceof Error ? error.message : 'unknown error'}).`,
-      provider,
+  while (attemptNumber < MAX_ATTEMPTS) {
+    attemptNumber += 1
+
+    const attemptStarted = Date.now()
+    const attempt = await requestImages(url, timeoutMs)
+    const attemptMs = Date.now() - attemptStarted
+
+    if (attempt.ok) {
+      const candidates = parseSerpApiImages(attempt.body)
+
+      // Logged on success too: when a search is slow, the useful question is how
+      // slow, and the answer has to be somewhere other than the SerpAPI dashboard.
+      console.info(
+        `[ai/search-images] ok query="${wanted}" attempt=${attemptNumber} elapsed=${attemptMs}ms candidates=${candidates.length}`,
+      )
+
+      if (candidates.length === 0) {
+        return {
+          candidates: [],
+          elapsedMs: Date.now() - startedAt,
+          note: `No usable images found for "${wanted}". Ask the admin to upload one instead.`,
+          provider,
+        }
+      }
+
+      // Google's own ordering is relevance-ranked; re-sorting it here would only
+      // guess again. `isProduct` is passed through so the model can prefer a
+      // packshot when it explains the options.
+      return {
+        candidates: candidates.slice(0, limit),
+        elapsedMs: Date.now() - startedAt,
+        provider,
+      }
     }
+
+    lastFailure = attempt
+
+    console.warn(
+      `[ai/search-images] fail query="${wanted}" attempt=${attemptNumber} elapsed=${attemptMs}ms timedOut=${attempt.timedOut} status=${attempt.status ?? '-'} — ${attempt.message}`,
+    )
+
+    if (!attempt.retryable) break
   }
 
-  if (!response.ok) {
-    return { candidates: [], note: `The image search provider returned HTTP ${response.status}.`, provider }
+  const elapsedMs = Date.now() - startedAt
+  const timedOut = lastFailure?.timedOut ?? false
+
+  return {
+    candidates: [],
+    elapsedMs,
+    note: timedOut
+      ? `The image search timed out after ${Math.round(elapsedMs / 1000)}s. SerpAPI is slow on a cold Google Images search — about a minute is normal. The search may already be cached: retry the SAME query once, without shortening or rewording it, or ask the admin to upload the picture.`
+      : `Web image search failed: ${lastFailure?.message ?? 'unknown error'}. Ask the admin to upload an image instead.`,
+    provider,
+    timedOut,
   }
-
-  const body: unknown = await response.json().catch(() => null)
-
-  // SerpAPI answers 200 with an `error` string for a bad key or exhausted quota.
-  const providerError = (body as { error?: unknown } | null)?.error
-
-  if (typeof providerError === 'string' && providerError.length > 0) {
-    return { candidates: [], note: `The image search provider rejected the request: ${providerError}`, provider }
-  }
-
-  const candidates = parseSerpApiImages(body)
-
-  if (candidates.length === 0) {
-    return {
-      candidates: [],
-      note: `No usable images found for "${wanted}". Ask the admin to upload one instead.`,
-      provider,
-    }
-  }
-
-  // Google's own ordering is relevance-ranked; re-sorting it here would only
-  // guess again. `isProduct` is passed through so the model can prefer a
-  // packshot when it explains the options.
-  return { candidates: candidates.slice(0, limit), provider }
 }
