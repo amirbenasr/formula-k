@@ -581,7 +581,13 @@ export type StageProductImagesInput = {
   mode?: ImageMode
   note?: string
   /** Remote images to download into the library first. */
-  webUrls?: Array<{ credit?: string; pageUrl?: string; title?: string; url: string }>
+  webUrls?: Array<{
+    credit?: string
+    fallbackUrl?: string
+    pageUrl?: string
+    title?: string
+    url: string
+  }>
 }
 
 const imageCount = (count: number): string => `${count} image${count === 1 ? '' : 's'}`
@@ -675,7 +681,11 @@ export async function stageProductImages(
         await importImageFromUrl({
           alt,
           credit: candidate.credit,
+          fallbackUrl: candidate.fallbackUrl,
           payload,
+          // The page the image was found on, sent as `Referer`: retail CDNs often
+          // refuse an image request that does not come from their own page.
+          referer: candidate.pageUrl,
           sourcePageUrl: candidate.pageUrl,
           url: candidate.url,
           user: context.user,

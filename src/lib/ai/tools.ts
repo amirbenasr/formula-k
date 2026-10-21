@@ -203,7 +203,16 @@ const stageProductImagesSchema = z.object({
   webUrls: z
     .array(
       z.object({
-        credit: z.string().optional().describe('Author · licence, from the search result'),
+        credit: z
+          .string()
+          .optional()
+          .describe('Where the image came from (the result `source`), recorded on the media row'),
+        fallbackUrl: z
+          .string()
+          .optional()
+          .describe(
+            'The result `fallbackUrl` — the provider\'s own copy of the thumbnail. Used only if the source CDN refuses the direct download.',
+          ),
         pageUrl: z.string().optional().describe('The result page the image was found on'),
         title: z.string().optional().describe('Short description, used as alt text'),
         url: z.string().describe('Direct image URL, exactly as returned by search_web_images'),
@@ -211,7 +220,9 @@ const stageProductImagesSchema = z.object({
     )
     .max(3)
     .optional()
-    .describe('Remote images to download into the library and attach. Use only URLs from search_web_images.'),
+    .describe(
+      'Remote images to download into the library and attach. Use only URLs from search_web_images.',
+    ),
 })
 type StageProductImagesToolInput = z.infer<typeof stageProductImagesSchema>
 
@@ -336,25 +347,21 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
 
     search_web_images: tool({
       description:
-        'Find candidate photos on the web. Only call this when find_media found no plausible match AND the admin did not supply an image. These are openly licensed stock or encyclopaedic photos — NOT the brand\'s official packshots — so the admin must confirm the choice. Returns direct image URLs to pass to stage_product_images.',
+        "Find candidate photos on the web via Google Images. Only call this when find_media found no plausible match AND the admin did not supply an image. Prefer results where `isProduct` is true and the `credit` is the brand's own site. These are photos from third-party pages, not licensed assets, so the admin must confirm the choice. Returns image URLs to pass to stage_product_images.",
       inputSchema: searchWebImagesSchema,
       execute: async ({ limit = 6, query }: SearchWebImagesInput) => {
-        const { candidates, note, provider, relaxed, usedQuery } = await searchWebImages(query, limit)
+        const { candidates, note, provider } = await searchWebImages(query, limit)
 
         return {
           candidates,
           hint:
             candidates.length === 0
               ? 'No web candidates. Ask the admin to upload an image instead of guessing a URL.'
-              : relaxed
-                ? `Nothing matched "${query}", so these match "${usedQuery}" instead. They are topically related, not pictures of this product — show them to the admin and let them choose, and say plainly that it is a generic photo.`
-                : 'Pick the closest candidate and stage it with stage_product_images (webUrls). Tell the admin it is a web image and name the licence — never claim it is the official product photo.',
+              : 'Pick the candidate whose source is the brand itself (check `credit`) and whose title matches the product, then stage it with stage_product_images (webUrls). Pass url, pageUrl, fallbackUrl, title and credit together so the download can fall back and the media row is credited.',
           note,
           provider,
-          relaxed: relaxed ?? false,
-          usedQuery,
           warning:
-            'Web images are Creative Commons licensed, not official brand assets. The admin is responsible for confirming the store may use it.',
+            "These are third-party copyrighted photos, not licensed stock. The source is recorded and the admin approves the image, but confirming the store may publish it is the admin's call.",
         }
       },
     }),

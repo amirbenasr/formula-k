@@ -446,7 +446,7 @@ export interface Media {
     [k: string]: unknown;
   } | null;
   /**
-   * Where this file came from. Web images are not official brand assets.
+   * Where this file came from. Web images are not licensed assets.
    */
   source?: ('upload' | 'web' | 'seed') | null;
   /**
@@ -454,7 +454,7 @@ export interface Media {
    */
   sourceUrl?: string | null;
   /**
-   * Author and licence, e.g. "Jane Doe · CC BY 4.0". Required by most Creative Commons licences when the image is published.
+   * Who the image came from, e.g. "Anua" or "YesStyle". The web tier fills this from the search result.
    */
   credit?: string | null;
   prefix?: string | null;

@@ -111,14 +111,14 @@ DEEPSEEK_API_KEY=sk-...
 AI_MODEL=deepseek-flash     # optional; alias currently serving V4.1 Flash
 AI_THINKING=disabled        # optional; see below
 
-# Web image search (tier 2 of §5a). All optional — both providers work keyless.
-IMAGE_SEARCH_PROVIDER=auto  # auto | openverse | commons | none
-OPENVERSE_TOKEN=...         # optional; raises Openverse's anonymous rate limit
+# Web image search (tier 2 of §5a), using Google Images via SerpAPI.
+IMAGE_SEARCH_PROVIDER=serpapi   # serpapi | none
 ```
 
-`IMAGE_SEARCH_PROVIDER=auto` tries Openverse, then Wikimedia Commons. `none` makes
-`search_web_images` return an explanatory note instead of searching, which is the right
-setting if you want product images to come only from the media library.
+`SERPAPI_API_KEY` is the same key the competitor-price lookup uses — image search adds no
+new vendor or credential. `IMAGE_SEARCH_PROVIDER=none` makes `search_web_images` return an
+explanatory note instead of searching, which is the right setting if you want product images
+to come only from the media library or an explicit upload.
 
 ### Why thinking is disabled
 
@@ -204,7 +204,7 @@ order is enforced by the tools plus the system prompt, not by luck:
 | --- | --- | --- | --- |
 | 0 | Attached in the chat | free | The admin picked the file. Uploaded immediately, id passed to the model |
 | 1 | `find_media` (own library) | free | Already licensed, usually the brand's own packshot. Score ≥ 0.6 is a real match |
-| 2 | `search_web_images` | slow | Openly licensed but generic — often not this product at all |
+| 2 | `search_web_images` | 1 search | Google Images via SerpAPI — the brand's packshot, or a retailer's photo |
 | — | Never | — | The model may not invent a URL. Only ids from tier 0/1, or URLs returned by tier 2 |
 
 **Tier 0 — attachment.** `Chat.tsx` posts the file to Payload's own `/api/media` endpoint
@@ -219,31 +219,47 @@ token coverage with prefix matches at 0.8. Postgres `contains` alone cannot matc
 toner" against "Anua Heartleaf 77% Soothing Toner 250ml", which is why the scoring is fuzzy
 and why it is unit-tested without a database.
 
-**Tier 2 — the web.** No image-search API key exists in this project, so both providers are
-keyless: **Openverse** (CC/public-domain, better titles) with **Wikimedia Commons** as
-fallback. Both are AND-matched, so a five-word product name returns zero results and the
-query is relaxed to its last two or three product words. Relaxed results are labelled
-`relaxed: true` and the system prompt requires the assistant to say the image is topically
-related rather than *this* product. Candidates are re-ranked by title/tag overlap so a search
-for "toner" does not put printer cartridges first.
+**Tier 2 — the web.** `engine=google_images` through SerpAPI, reusing `SERPAPI_API_KEY`, so
+no new vendor. Each result carries two URLs, and both matter:
 
-This tier is genuinely weak for branded cosmetics: "anua heartleaf toner bottle" returns
-nothing, and "serum bottle" returns a blood-transfusion painting and a pig-cholera plant.
-**The reliable path is to upload the packshot or reuse a library image.** Put the official
-product photos in the media library with a descriptive `alt` (product + brand name) and tier
-1 will find them. Set `IMAGE_SEARCH_PROVIDER=none` to switch tier 2 off entirely.
+- `original` — the direct image on the source's own CDN. This is what we want, and what gets
+  downloaded first.
+- `thumbnail` — SerpAPI's own copy, kept as `fallbackUrl` because retail CDNs commonly refuse
+  a request that does not look like a browser on their page.
 
-Downloading is defensive, because the URL is model-influenced: only public http(s) is
+Results also carry `source` (stored as `credit`), `link` (the page, sent as `Referer` and
+recorded as `sourceUrl`), `original_width`/`original_height` and `is_product`. Anything with
+no `original`, or an `original` under 300px, is dropped at parse time — a thumbnail cannot
+become a product's primary image.
+
+> **Why not a Creative Commons corpus.** The first version of this used Openverse with
+> Wikimedia Commons as fallback. It was removed because those corpora do not contain branded
+> beauty or household products: "anua heartleaf toner bottle" returned zero results, and
+> "serum bottle" returned a blood-transfusion painting and a pig-cholera plant. No query
+> tuning fixes a corpus with the wrong contents. Google Images returns the brand's own
+> packshots, which is the only thing useful to a store that resells those products.
+
+**Licence.** These are third-party copyrighted photos, not licensed stock. SerpAPI can filter
+to freely licensed images (`licenses=fc`), but that discards the brand packshots and leaves
+generic stock — defeating the purpose. The trade made instead: provenance is recorded on
+every media row (`source`, `sourceUrl`, `credit`), the approval panel shows it, and a human
+approves each image. Confirming the store may publish a given photo is the admin's call.
+
+**Downloading** is defensive, because the URL is model-influenced: only public http(s) is
 allowed (loopback, private ranges and link-local metadata endpoints are rejected before and
 after redirects), content must be `image/*` under 10 MB, and the bytes must decode through
-`sharp` before they reach storage. The storage plugin decides where they land — R2 when
-`R2_*` is valid, `public/media` otherwise — so `payload.create` is the only writer.
+`sharp` before they reach storage. The download is a ladder — `original` with a browser
+user-agent and a `Referer` of the result page, then `fallbackUrl`, then a `problems[]` entry
+the model can report. The storage plugin decides where the bytes land — R2 when `R2_*` is
+valid, `public/media` otherwise — so `payload.create` is the only writer.
 
-**Provenance.** Web-sourced media rows carry `source: 'web'`, the origin page in
-`sourceUrl`, and the author/licence in `credit`. Without those three fields a stock photo is
-indistinguishable from a real product photo, and nobody can answer "where did this come from,
-and may we use it?" months later. The approval panel shows the thumbnail, the source and the
-licence for exactly this reason.
+**Provenance.** Web-sourced media rows carry `source: 'web'`, the origin page in `sourceUrl`,
+and the source site in `credit`. Without those three fields a web photo is indistinguishable
+from a real product photo, and nobody can answer "where did this come from, and may we use
+it?" months later.
+
+**Cost.** One SerpAPI search per lookup, and SerpAPI serves an identical query from its cache
+for an hour, which is free and does not count against the quota.
 
 **When the media row is created.** Web images are downloaded and inserted at *staging* time,
 not on Apply: the approval panel has to show the actual picture (approving "some URL" blind
