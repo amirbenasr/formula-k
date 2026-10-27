@@ -224,6 +224,36 @@ export function readGalleryRows(gallery: unknown): GalleryRow[] {
 }
 
 /**
+ * What the assistant needs to know about a product's pictures when it is
+ * *reading* the catalogue rather than writing to it.
+ *
+ * `gallery` is the only field that decides whether a product has a photo: the
+ * storefront renders `gallery[0]` and an empty gallery means no image at all.
+ * Flattening it here keeps `find_products` rows cheap to read and makes an image
+ * audit ("which products have no picture?") a property of the row rather than
+ * something the model has to infer from raw array shapes.
+ */
+export type GallerySummary = {
+  /** Every usable media id, in gallery order. `[0]` is the storefront primary. */
+  galleryMediaIds: number[]
+  hasImage: boolean
+  imageCount: number
+  /** The storefront primary, or `null` when the gallery has no usable row. */
+  primaryMediaId: number | null
+}
+
+export function summarizeGallery(gallery: unknown): GallerySummary {
+  const galleryMediaIds = readGalleryRows(gallery).map((row) => row.image)
+
+  return {
+    galleryMediaIds,
+    hasImage: galleryMediaIds.length > 0,
+    imageCount: galleryMediaIds.length,
+    primaryMediaId: galleryMediaIds[0] ?? null,
+  }
+}
+
+/**
  * Rebuilds gallery rows for `ids`, carrying over each image's `variantOption`.
  *
  * Reordering or appending an image must not quietly unbind the others from their

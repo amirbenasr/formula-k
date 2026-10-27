@@ -8,6 +8,7 @@ import {
   plainTextToRichText,
   readGalleryRows,
   slugFromTitle,
+  summarizeGallery,
   toGalleryRows,
 } from '../validate'
 
@@ -277,6 +278,48 @@ describe('readGalleryRows', () => {
   it('returns an empty list for a non-array', () => {
     expect(readGalleryRows(null)).toEqual([])
     expect(readGalleryRows(undefined)).toEqual([])
+  })
+})
+
+describe('summarizeGallery', () => {
+  it('reports a product with no usable image', () => {
+    expect(summarizeGallery([])).toEqual({
+      galleryMediaIds: [],
+      hasImage: false,
+      imageCount: 0,
+      primaryMediaId: null,
+    })
+  })
+
+  it('keeps the gallery order and exposes the storefront primary', () => {
+    expect(summarizeGallery([{ image: 12 }, { image: 8 }, { image: 3 }])).toEqual({
+      galleryMediaIds: [12, 8, 3],
+      hasImage: true,
+      imageCount: 3,
+      primaryMediaId: 12,
+    })
+  })
+
+  it('reads a populated media document as the primary image', () => {
+    expect(summarizeGallery([{ image: { id: 5, url: '/x.jpg' } }])).toEqual({
+      galleryMediaIds: [5],
+      hasImage: true,
+      imageCount: 1,
+      primaryMediaId: 5,
+    })
+  })
+
+  it('treats unusable rows as no image rather than as a picture', () => {
+    const summary = summarizeGallery([{ variantOption: 9 }, null, { image: 0 }])
+
+    expect(summary.hasImage).toBe(false)
+    expect(summary.imageCount).toBe(0)
+    expect(summary.primaryMediaId).toBeNull()
+  })
+
+  it('returns the empty summary for a non-array value', () => {
+    expect(summarizeGallery(undefined).hasImage).toBe(false)
+    expect(summarizeGallery(null).imageCount).toBe(0)
   })
 })
 
