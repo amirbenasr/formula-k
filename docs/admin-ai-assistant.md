@@ -156,7 +156,7 @@ predictable. Set `AI_THINKING=enabled` to opt back in.
 
 | Tool | Purpose |
 | --- | --- |
-| `find_products` | Search the catalogue by title/slug, with stock and variants |
+| `find_products` | Search the catalogue by title/slug, with stock, variants and image coverage; `missingImages: true` for the image audit |
 | `find_brands` | Search brands by title/slug — used to get a brand id before assigning one |
 | `find_media` | Rank the store's existing images against a product name (0–1 scores) |
 | `search_web_images` | Find candidate photos on the web, openly licensed only |
@@ -303,6 +303,15 @@ rows and carries each image's `variantOption` across, so reordering does not qui
 variant product's per-variant pictures. The storefront primary image is simply `gallery[0]`,
 which is why `stage_product_images` has a distinct `set_primary` mode instead of asking the
 model to re-send the whole list.
+
+**Finding products with no image.** `find_products` returns `hasImage`, `imageCount`,
+`primaryMediaId` and `galleryMediaIds` for every row, derived from `gallery` by
+`summarizeGallery()` in `validate.ts`. `missingImages: true` adds
+`gallery.image exists: false` to the query, so the assistant can answer "which products are
+missing a photo?" in one call instead of paging through the catalogue. A full scan is used for
+that filter (and for `lowStockBelow`), because both need the whole matching set before `limit`
+is applied; the result carries `totalMatching` and `truncated` so a partial list is never
+mistaken for the complete one.
 
 ### 5b. Diagnosing a failed turn
 

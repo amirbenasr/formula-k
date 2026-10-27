@@ -13,6 +13,7 @@ import { searchMedia } from './media-lookup'
 import { inventoryRows, resolveTargets } from './resolve'
 import type { AiToolContext, LooseDoc, PlannedChange, StagedWrite } from './types'
 import { money } from './types'
+import { summarizeGallery } from './validate'
 
 /**
  * Tools exposed to the admin assistant.
@@ -42,6 +43,12 @@ const findProductsSchema = z.object({
     .int()
     .optional()
     .describe('Only return rows whose stock is at or below this number'),
+  missingImages: z
+    .boolean()
+    .optional()
+    .describe(
+      'Only return products with no usable gallery image. This is the image audit: use it instead of paging through the catalogue.',
+    ),
   query: z.string().optional().describe('Text to match against product title or slug'),
 })
 type FindProductsInput = z.infer<typeof findProductsSchema>
@@ -241,26 +248,54 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
   return {
     find_products: tool({
       description:
-        'Search the product catalogue by title, slug or brand. Returns id, title, slug, price, whether the product uses variants, and its stock (per variant when it has them). ALWAYS use this before creating a product, so you do not add a duplicate.',
+        'Search the product catalogue by title or slug. Returns id, title, slug, price, status, stock (per variant when it has them) and image coverage (hasImage, imageCount, primaryMediaId, galleryMediaIds). Pass missingImages: true to list products that have no gallery image at all — that is the image audit, and it is the only reliable way to answer "which products are missing a photo?". ALWAYS use this before creating a product, so you do not add a duplicate.',
       inputSchema: findProductsSchema,
-      execute: async ({ limit = 10, lowStockBelow, query }: FindProductsInput) => {
-        const where: Where = query
-          ? { or: [{ title: { contains: query } }, { slug: { contains: query } }] }
-          : {}
+      execute: async ({
+        limit = 10,
+        lowStockBelow,
+        missingImages,
+        query,
+      }: FindProductsInput) => {
+        const conditions: Where[] = []
 
-        const { docs } = await payload.find(
+        if (query) {
+          conditions.push({ or: [{ title: { contains: query } }, { slug: { contains: query } }] })
+        }
+
+        // An empty gallery is the definition of "missing image": the field is an
+        // array of `{ image }` rows, so `gallery.image exists: false` matches both
+        // an absent array and one with no usable row.
+        if (missingImages) {
+          conditions.push({ 'gallery.image': { exists: false } })
+        }
+
+        const where: Where =
+          conditions.length === 0
+            ? {}
+            : conditions.length === 1
+              ? conditions[0]
+              : { and: conditions }
+
+        // A report must not be silently cut off at the first page. Image and
+        // low-stock filters need the whole matching set before `limit` is
+        // applied, so those scans fetch every match and slice afterwards.
+        const needsFullScan = missingImages === true || typeof lowStockBelow === 'number'
+
+        const { docs, totalDocs } = await payload.find(
           asAdmin({
             collection: 'products',
             depth: 0,
-            limit,
+            limit: needsFullScan ? 0 : limit,
+            pagination: !needsFullScan,
             sort: 'title',
             where,
           }),
         )
 
-        const rows: Record<string, unknown>[] = []
+        const products = docs as LooseDoc[]
 
-        for (const product of docs as LooseDoc[]) {
+        /** Stock and variant rows, resolved only for products whose row is needed. */
+        const describeInventory = async (product: LooseDoc) => {
           const targets = await resolveTargets(payload, product.slug ?? String(product.id), 50)
 
           const variants = targets
@@ -278,10 +313,49 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
               ? variants.reduce((sum, variant) => sum + variant.inventory, 0)
               : (targets.find((target) => target.kind === 'product')?.inventory ?? 0)
 
-          if (typeof lowStockBelow === 'number' && stock > lowStockBelow) continue
+          return { stock, variants }
+        }
+
+        const rows: Record<string, unknown>[] = []
+        let totalMatching = needsFullScan ? products.length : totalDocs
+
+        for (const product of products) {
+          const image = summarizeGallery(product.gallery)
+
+          if (typeof lowStockBelow === 'number') {
+            // The stock filter is applied in JS, so every candidate has to be
+            // resolved before the limit can be honoured.
+            const { stock, variants } = await describeInventory(product)
+
+            if (stock > lowStockBelow) {
+              totalMatching -= 1
+              continue
+            }
+
+            if (rows.length < limit) {
+              rows.push({
+                enableVariants: product.enableVariants === true,
+                ...image,
+                id: product.id,
+                inventory: stock,
+                price: money(product.priceInUSD),
+                slug: product.slug,
+                status: product._status,
+                title: product.title,
+                variants: variants.length > 0 ? variants : undefined,
+              })
+            }
+
+            continue
+          }
+
+          if (rows.length >= limit) break
+
+          const { stock, variants } = await describeInventory(product)
 
           rows.push({
             enableVariants: product.enableVariants === true,
+            ...image,
             id: product.id,
             inventory: stock,
             price: money(product.priceInUSD),
@@ -292,7 +366,12 @@ export function buildTools({ conversationId, payload, user }: AiToolContext): To
           })
         }
 
-        return { count: rows.length, products: rows }
+        return {
+          count: rows.length,
+          products: rows,
+          totalMatching,
+          truncated: totalMatching > rows.length,
+        }
       },
     }),
 
