@@ -5,7 +5,8 @@ import { useAuth } from '@/providers/Auth'
 import { cn } from '@/utilities/cn'
 import { ChevronRight, LayoutGrid, User, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Header, Page, Product } from '@/payload-types'
 
 import type { HeaderCategory } from './index.client'
@@ -37,18 +38,41 @@ function getLinkHref(link: {
 
 export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavProps) {
   const { user } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Prevent body scroll when menu is open
+  // The drawer is portaled to <body>, which only exists on the client.
+  useEffect(() => setMounted(true), [])
+
+  // Prevent body scroll while the menu is open, restoring whatever was set before.
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     return () => {
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
     }
   }, [isOpen])
+
+  // Escape closes the drawer, and focus moves inside while it is open.
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    closeButtonRef.current?.focus()
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus?.()
+    }
+  }, [isOpen, onClose])
 
   // Close on resize to desktop
   useEffect(() => {
@@ -61,21 +85,35 @@ export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavP
     return () => window.removeEventListener('resize', handleResize)
   }, [onClose])
 
-  return (
+  if (!mounted) return null
+
+  // The drawer must NOT live inside <header>: the header is `sticky z-50` with a
+  // `backdrop-blur`, so it is both a stacking context and a containing block for
+  // fixed descendants. Nested there, `fixed inset-0` resolved against the header
+  // box (a ~100px tall sliver) instead of the viewport, and its z-index was
+  // trapped beneath the header's own layer. Portaling to <body> and sitting above
+  // the header's z-50 fixes both on phones and tablets.
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 lg:hidden',
+          'fixed inset-0 z-[60] bg-black/50 transition-opacity duration-300 lg:hidden',
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
+        aria-hidden="true"
         onClick={onClose}
       />
 
       {/* Slide-out Menu */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu principal"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-[85%] max-w-sm transform flex-col bg-card transition-transform duration-300 ease-out lg:hidden',
+          'fixed left-0 top-0 z-[70] flex h-dvh w-[85%] max-w-sm transform flex-col bg-card transition-transform duration-300 ease-out lg:hidden',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -83,6 +121,7 @@ export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavP
         <div className="flex items-center justify-between border-b border-border p-4">
           <span className="font-serif text-xl font-bold text-primary-ink">Formula K</span>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="cursor-pointer p-2 text-muted transition-colors hover:text-foreground"
             aria-label="Fermer le menu"
@@ -197,6 +236,7 @@ export function MobileNav({ isOpen, onClose, menu, categories = [] }: MobileNavP
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
